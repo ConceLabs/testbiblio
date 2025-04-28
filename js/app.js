@@ -163,6 +163,8 @@ async function openDoc(path, title, isMD = false) {
   viewToolbar.style.display = 'none';
   docToolbar.classList.remove('hidden');
   viewer.style.display      = 'block';
+  viewer.scrollTop = 0;               // resetea el scroll
+  viewer.style.overflowY = 'auto';     // fuerza recalcular overflow
   document.title = title;
 
   // reset búsqueda y zoom
