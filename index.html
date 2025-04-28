@@ -18,6 +18,7 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" rel="stylesheet"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.8/axios.min.js"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
   <style>
     :root {
@@ -45,12 +46,18 @@
       color: var(--text);
       overflow: hidden;
     }
+    main {
+      flex: 1;
+    }
 
     header {
       background: var(--primary);
       color: #fff;
       padding: 1rem;
       z-index: 100;
+    }
+    header, .toolbar {
+        position: sticky;
     }
     
     /* Versión compacta del header para el modo de documento */
@@ -108,8 +115,9 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0.75rem;
+      padding: 0.5rem 1rem;
       background: #e8ebf0;
+      top: 0;
       border-bottom: 1px solid rgba(0,0,0,0.1);
     }
     
@@ -126,8 +134,8 @@
       background: rgba(255, 255, 255, 0.8);
       border: none;
       border-radius: 50%;
-      width: 40px;
-      height: 40px;
+      width: 45px;
+      height: 45px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -138,8 +146,8 @@
     
     /* Botones más pequeños en modo documento */
     .toolbar.compact .btn {
-      width: 30px;
-      height: 30px;
+      width: 35px;
+      height: 35px;
       font-size: 0.85rem;
     }
 
@@ -157,9 +165,14 @@
       color: white;
     }
 
-    .container {
-      flex: 1;
+    .container, #viewer {
+      width: 100%;
+      max-width: 100%;
+      margin: auto;
+      padding: 0;
+      padding-top: 1rem;
       overflow-y: auto;
+
       padding: 0.75rem;
     }
     
@@ -171,7 +184,7 @@
     .doc-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 0.75rem;
+      gap: 1rem;
     }
 
     .doc-item {
@@ -180,7 +193,7 @@
       padding: 1.25rem 0.75rem;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      justify-content: center;
       gap: 0.75rem;
       box-shadow: var(--shadow);
       border-top: 4px solid var(--primary);
@@ -200,7 +213,7 @@
       text-align: center;
       font-weight: 600;
       font-size: 0.85rem;
-      line-height: 1.3;
+      line-height: 1.2;
     }
 
     .doc-list {
@@ -209,6 +222,7 @@
       gap: 0.5rem;
     }
 
+    
     .doc-list .doc-item {
       flex-direction: row;
       justify-content: flex-start;
@@ -227,8 +241,9 @@
     #viewer {
       padding: 1rem;
       flex: 1;
+      height: 100vh;
+      line-height: 1.5;
       overflow-y: auto;
-      background: #fff;
       line-height: 1.5;
       zoom: 1; /* Valor de zoom inicial */
      }
@@ -329,7 +344,7 @@
     @media screen and (max-width: 480px) {
       #viewer {
         padding: 0.5rem !important;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
       }
 
       .toolbar.compact .btn {
@@ -345,6 +360,10 @@
     .doc-item.calculadora {
       border-top: 4px solid #2a5d68;
       background: #f1f6f5;
+    }
+    
+    .transition {
+      transition: all 0.3s ease;
     }
 
   </style>
@@ -365,7 +384,7 @@
     <div class="view-btns">
       <button class="btn active" id="grid-view-btn" title="Vista en cuadrícula">
         <i class="fa-solid fa-table-cells"></i>
-      </button>
+        </button>
       <button class="btn" id="list-view-btn" title="Vista en lista">
         <i class="fa-solid fa-list"></i>
       </button>
@@ -386,10 +405,10 @@
     </div>
   </div>
 
-  <div class="container" id="main-container">
-    <div class="doc-grid" id="docList"></div>
-    <div id="viewer" style="display:none;"></div>
-  </div>
+    <main>
+    <div class="container" id="main-container"></div>
+    <div id="viewer" style="display:none;"></div>    
+    </main>
 
   <div class="search-results">
     <button id="prev-result"><i class="fa-solid fa-chevron-up"></i></button>
@@ -399,6 +418,7 @@
   </div>
 
   <script>
+    let preloadedDocs = {};
     // Definición de documentos con sus propiedades
     const docs = [
 
@@ -417,6 +437,15 @@
     { file: 'minutas.html', title: 'Minutas Jurisprudencia', icon: 'fa-solid fa-book-bookmark' },
       { file: 'calculadora_abonos.html', title: 'Calculadora Abonos por Arresto', icon: 'fa-solid fa-calculator' },
 ];
+    
+    async function preloadDocuments() {
+        for (const doc of docs) {
+            if (doc.file.endsWith('.html')) {
+                const url = doc.file === 'minutas.html' ? doc.file : ('docs/' + doc.file);
+                preloadedDocs[doc.file] = await fetch(url).then(res => res.text());
+            }
+        }
+    }
 
     // Elementos DOM
     const docList = document.getElementById('docList');
@@ -434,6 +463,7 @@
     let highlights = [], currentHit = -1, lastTerm = '';
     
     // Construir la lista de documentos
+    function renderView(){
     function buildDocList() {
       docList.innerHTML = '';
       docs.forEach(doc => {
@@ -453,58 +483,69 @@
         docList.appendChild(card);
       });
     }
+    
+    const docGridContainer = document.createElement('div');
+    docGridContainer.className = 'doc-grid';
+    docGridContainer.id = 'docList'
+    document.getElementById('main-container').appendChild(docGridContainer);
+    
+    buildDocList();
+    }
 
     // Cargar un documento
     async function loadDocument(file, title) {
       try {
-        // Determinar ruta: si es minutas.html, cargar desde root, sino desde docs/
-        const url = file === 'minutas.html' ? file : ('docs/' + file);
-        const res = await fetch(url);
-        if (!res.ok) {
-          viewer.innerHTML = `<div class="error"><h2>Error ${res.status}</h2><p>No se pudo cargar el documento.</p></div>`;
-          return;
-        }
-        
-        const txt = await res.text();
-        
-        // Actualizar título del documento
-        document.title = `${title} - Biblioteca Jurídica ANF`;
-        
-        let html;
-        if (file.endsWith('.md')) {
-          html = marked.parse(txt);
-        } else {
-          const p = new DOMParser();
-          const docHtml = p.parseFromString(txt, 'text/html');
-          // Solo eliminamos estilos y enlaces si existen
-          if (docHtml.head) {
-            docHtml.head.querySelectorAll('style,link').forEach(e => e.remove());
+          // Determinar ruta: si es minutas.html, cargar desde root, sino desde docs/
+          let html = '';
+          if (file in preloadedDocs) {
+              html = preloadedDocs[file];
+          } else {
+              const url = file === 'minutas.html' ? file : ('docs/' + file);
+              const res = await fetch(url);
+              if (!res.ok) {
+                  viewer.innerHTML = `<div class="error"><h2>Error ${res.status}</h2><p>No se pudo cargar el documento.</p></div>`;
+                  return;
+              }
+              html = await res.text();
           }
-          html = docHtml.body ? docHtml.body.innerHTML : txt;
-        }
-        
-        viewer.innerHTML = html;
-        viewer.dataset.original = viewer.innerHTML;
-        
-        // Aplicar resaltado de sintaxis
-        hljs.highlightAll();
-        
-        // Restaurar tamaño de fuente guardado
-        const savedSize = localStorage.getItem('fontSize') || '16px';
-        viewer.style.fontSize = savedSize;
-
-        // Limpiar búsqueda
-        resetSearch();
+          
+          // Actualizar título del documento
+          document.title = `${title} - Biblioteca Jurídica ANF`;
+          
+          if (file.endsWith('.md')) {
+              html = marked.parse(html);
+          } else {
+              const p = new DOMParser();
+              const docHtml = p.parseFromString(html, 'text/html');
+              // Solo eliminamos estilos y enlaces si existen
+              if (docHtml.head) {
+                  docHtml.head.querySelectorAll('style,link').forEach(e => e.remove());
+              }
+              html = docHtml.body ? docHtml.body.innerHTML : html;
+          }
+          
+          viewer.innerHTML = html;
+          viewer.dataset.original = viewer.innerHTML;
+          
+          // Aplicar resaltado de sintaxis
+          hljs.highlightAll();
+          
+          // Restaurar tamaño de fuente guardado
+          const savedSize = localStorage.getItem('fontSize') || '16px';
+          viewer.style.fontSize = savedSize;
+  
+          // Limpiar búsqueda
+          resetSearch();
       } catch (err) {
-        console.error('Error cargando documento:', err);
+        console.error("Error cargando documento:", err);
         viewer.innerHTML = `<div class="error"><h2>Error</h2><p>${err.message}</p></div>`;
-      }
+        }
     }
 
     // Abrir un documento
     function openDoc(file, title) {
       // Cambiar a vista documento
-      docList.style.display = 'none';
+      document.getElementById('main-container').style.display = 'none';
       viewer.style.display = 'block';
       
       // Cambiar barras de herramientas
@@ -530,7 +571,7 @@
       
       // Cambiar a vista de lista
       viewer.style.display = 'none';
-      docList.style.display = 'grid';
+      document.getElementById('main-container').style.display = 'block';
       
       // Cambiar barras de herramientas
       docToolbar.classList.add('hidden');
@@ -724,12 +765,12 @@
     });
 
     // Inicialización
-    document.addEventListener('DOMContentLoaded', () => {
-      buildDocList();
+    document.addEventListener('DOMContentLoaded', async () => {
+      await preloadDocuments();
+      renderView();
       
       // Restaurar modo de vista
-      const savedView = localStorage.getItem('viewMode');
-      if (savedView === 'list') {
+        const savedView = localStorage.getItem('viewMode'); if (savedView === 'list') {
         toggleView('list');
       }
       
@@ -738,9 +779,6 @@
         navigator.serviceWorker.register('/service-worker.js')
           .catch(err => console.error('Error al registrar Service Worker:', err));
       }
-
-      // Asegurarse de que empezamos en la vista de inicio
-      goHome();
     });
   </script>
 </body>
