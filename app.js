@@ -55,6 +55,7 @@ const viewer      = document.getElementById('viewer');
 
 // === NAVEGACIÓN SPA ===
 function showHome() {
+  buildHomeList();
   minutasView.style.display = 'none';
   viewer.style.display      = 'none';
   homeView.style.display    = 'block';
