@@ -3,24 +3,22 @@
 <head>
   <meta charset="utf-8"/>
   <base href="./" />
-
   <title>Biblioteca Jurídica – ANF</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
 
   <!-- PWA manifest -->
   <link rel="manifest" href="manifest.json" />
 
-  <!-- icons -->
+  <!-- Icons -->
   <link href="favicon.ico" rel="icon"/>
   <link href="apple-touch-icon.png" rel="apple-touch-icon"/>
 
-  <!-- Librerías externas -->
+  <!-- Externals -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" rel="stylesheet"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
 
-  <!-- Tus estilos, con hover para animar -->
   <style>
     :root {
       --primary:#1f334d; --bg:#f5f7fa; --text:#333;
@@ -28,25 +26,25 @@
     }
     *{box-sizing:border-box;margin:0;padding:0;}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-      background:var(--bg);color:var(--text);
+      background:var(--bg); color:var(--text);
       display:flex;flex-direction:column;height:100vh;overflow:hidden;}
-    header{background:var(--primary);color:#fff;padding:1rem;}
+    header{background:var(--primary);color:#fff;padding:1rem;z-index:10;}
     .title-bar{display:flex;align-items:center;}
     .title-bar h1{font-size:1.4rem;flex:1;}
     .search-bar{background:#fff;border-radius:50px;
-      padding:.5rem 1rem;margin:.75rem 0;
-      display:flex;align-items:center;box-shadow:var(--shadow);}
+      padding:.5rem 1rem;margin:.75rem 0;display:flex;align-items:center;box-shadow:var(--shadow);}
     .search-bar input{flex:1;border:none;background:transparent;padding:.25rem;font-size:1rem;}
     .toolbar{display:flex;align-items:center;justify-content:space-between;
       background:#e8ebf0;padding:.75rem;border-bottom:1px solid rgba(0,0,0,0.1);}
+    .toolbar.hidden{display:none;}
     .btn{background:rgba(255,255,255,0.8);border:none;border-radius:50%;
-      width:40px;height:40px;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;
-      color:var(--primary);}
+      width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+      box-shadow:var(--shadow);color:var(--primary);cursor:pointer;}
     .btn.active{background:var(--primary);color:#fff;}
     .view-btns{display:flex;gap:.5rem;}
     .container{flex:1;overflow-y:auto;padding:.75rem;}
     .doc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem;}
+    .doc-list{display:flex;flex-direction:column;gap:.5rem;}
     .doc-item{background:var(--card-bg);border-radius:var(--radius);
       padding:1.25rem .75rem;display:flex;flex-direction:column;
       align-items:center;gap:.75rem;box-shadow:var(--shadow);
@@ -57,13 +55,21 @@
     .doc-title{text-align:center;font-weight:600;font-size:.85rem;}
     .search-results{position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);
       background:var(--primary);color:#fff;padding:.5rem;border-radius:50px;
-      display:none;align-items:center;gap:.5rem;box-shadow:var(--shadow);z-index:100;}
+      display:none;align-items:center;gap:.5rem;box-shadow:var(--shadow);z-index:20;}
     .search-results button{background:rgba(255,255,255,0.2);border:none;border-radius:50%;
       width:30px;height:30px;display:flex;align-items:center;justify-content:center;}
 
-    /* Viewer y Minutas */
-    #viewer{display:none;padding:1rem;overflow-y:auto;background:#fff;flex:1;line-height:1.5;}
-    #minutas-view{display:none;flex:1;overflow-y:auto;background:var(--bg);}
+    /* DOC TOOLBAR */
+    #doc-toolbar{display:flex;align-items:center;justify-content:space-between;
+      background:#e8ebf0;padding:.5rem .75rem;border-bottom:1px solid rgba(0,0,0,0.1);}
+    #doc-toolbar.hidden{display:none;}
+    #doc-toolbar .zoom-btn{width:32px;height:32px;font-size:1rem;}
+
+    /* VIEWER */
+    #viewer{display:none;flex:1;overflow-y:auto;padding:1rem;background:#fff;line-height:1.5;}
+
+    /* MINUTAS */
+    #minutas-view{display:none;flex:1;overflow-y:auto;}
     #minutas-view header{background:var(--primary);color:#fff;padding:.75rem;display:flex;align-items:center;}
     .home-btn{margin-left:auto;background:rgba(255,255,255,0.2);border:none;color:#fff;
       border-radius:var(--radius);padding:.4rem .8rem;cursor:pointer;display:flex;align-items:center;gap:.5rem;}
@@ -77,19 +83,17 @@
 
   <div id="app">
 
-    <!-- HOME VIEW -->
+    <!-- HOME -->
     <div id="home-view">
       <header>
-        <div class="title-bar">
-          <h1>Biblioteca Jurídica</h1>
-        </div>
+        <div class="title-bar"><h1>Biblioteca Jurídica</h1></div>
         <div class="search-bar">
           <i class="fa-solid fa-magnifying-glass"></i>
-          <input id="search" placeholder="Buscar…"/>
+          <input id="search" placeholder="Buscar por título o contenido…" />
         </div>
       </header>
 
-      <div class="toolbar">
+      <div class="toolbar" id="view-toolbar">
         <div class="view-btns">
           <button id="grid-view-btn" class="btn active"><i class="fa-solid fa-table-cells"></i></button>
           <button id="list-view-btn" class="btn"><i class="fa-solid fa-list"></i></button>
@@ -100,7 +104,7 @@
         <div id="docList" class="doc-grid"></div>
       </div>
 
-      <div class="search-results">
+      <div class="search-results" id="search-results">
         <button id="prev-result"><i class="fa-solid fa-chevron-up"></i></button>
         <span id="result-counter">0 de 0</span>
         <button id="next-result"><i class="fa-solid fa-chevron-down"></i></button>
@@ -108,10 +112,19 @@
       </div>
     </div>
 
-    <!-- DOCUMENT VIEWER -->
+    <!-- DOC TOOLBAR -->
+    <div id="doc-toolbar" class="hidden">
+      <button id="btn-back" class="btn"><i class="fa-solid fa-house"></i></button>
+      <div>
+        <button id="btn-font-decrease" class="btn zoom-btn"><i class="fa-solid fa-minus"></i></button>
+        <button id="btn-font-increase" class="btn zoom-btn"><i class="fa-solid fa-plus"></i></button>
+      </div>
+    </div>
+
+    <!-- VIEWER -->
     <div id="viewer"></div>
 
-    <!-- MINUTAS VIEW -->
+    <!-- MINUTAS -->
     <div id="minutas-view">
       <header>
         <div class="title-bar">
