@@ -1,21 +1,5 @@
 // === DATOS ===
 const docs = [
-  { file: 'docs/documento1.html',   title: 'CÓDIGO PENAL',                       icon: 'fa-solid fa-gavel' },
-  { file: 'docs/documento2.html',   title: 'CÓDIGO PROCESAL PENAL',              icon: 'fa-solid fa-scale-balanced' },
-  { file: 'docs/documento3.html',   title: 'LEY DE DROGAS',                      icon: 'fa-solid fa-pills' },
-  { file: 'docs/documento4.html',   title: 'LEY DE CONTROL DE ARMAS',            icon: 'fa-solid fa-gun' },
-  { file: 'docs/documento5.html',   title: 'LEY DE PENAS SUSTITUTIVAS',          icon: 'fa-solid fa-person-walking-arrow-right' },
-  { file: 'docs/documento6.html',   title: 'LEY DE VIOLENCIA INTRAFAMILIAR',     icon: 'fa-solid fa-house-user' },
-  { file: 'docs/documento7.html',   title: 'LEY RPA',                            icon: 'fa-solid fa-child' },
-  { file: 'docs/documento8.html',   title: 'LEY RPA (Diferida)',                 icon: 'fa-solid fa-child-reaching' },
-  { file: 'docs/documento9.html',   title: 'LEY DE VIOLENCIA EN LOS ESTADIOS',   icon: 'fa-solid fa-futbol' },
-  { file: 'docs/documento10.html',  title: 'LEY DE TRÁNSITO',                    icon: 'fa-solid fa-car' },
-  { file: 'docs/documento11.html',  title: 'LEY ORGÁNICA DEL MINISTERIO PÚBLICO',icon: 'fa-solid fa-building-columns' },
-  { file: 'calculadora_abonos.html', title: 'Calculadora Abonos por Arresto',    icon: 'fa-solid fa-calculator' },
-  { file: 'minutas',                title: 'Minutas Jurisprudencia',             icon: 'fa-solid fa-book-bookmark' }
-];
-
-const docsMinutas = [
   { path: 'minutas/2_CONTROL_DE_IDENTIDAD-LEY_DE_TRANSITO_C.md',      title: 'N° 2 CONTROL DE IDENTIDAD - LEY DE TRÁNSITO',               category: 'Control de Identidad' },
   { path: 'minutas/3_ACCESO_A_INFORMACION_EN_FACEBOOK.md',           title: 'N° 3 ACCESO A INFORMACIÓN EN FACEBOOK',                    category: 'Diligencias e Investigación' },
   { path: 'minutas/4_PRUEBA_POSTERIOR_AL_CIERRE.md',                title: 'N° 4 PRUEBA POSTERIOR AL CIERRE',                          category: 'Procedimiento y Garantías' },
@@ -50,16 +34,20 @@ const docsMinutas = [
   { path: 'minutas/32_INSTRUCCION_SOBRE_PRIMERAS_DILIGENCIAS.md',  title: 'N° 32 INSTRUCCIÓN SOBRE PRIMERAS DILIGENCIAS',             category: 'Diligencias e Investigación' }
 ];
 
+const docsMinutas = [
+  /* … tus N°2…N°32 … igual que antes … */
+];
+
 // === REFERENCIAS ===
 const homeView    = document.getElementById('home-view');
 const viewer      = document.getElementById('viewer');
 const minutasView = document.getElementById('minutas-view');
 
-// === SPA NAVIGATION ===
+// === NAVEGACIÓN SPA ===
 function showHome() {
-  minutasView.style.display = 'none';
-  viewer.style.display      = 'none';
   homeView.style.display    = 'block';
+  viewer.style.display      = 'none';
+  minutasView.style.display = 'none';
   buildHomeList();
   document.title = 'Biblioteca Jurídica – ANF';
 }
@@ -97,7 +85,7 @@ function renderMinutasList() {
   const filter = document.getElementById('minutas-catFilter').value;
   list.innerHTML = '';
   docsMinutas
-    .filter(m => filter==='all' || m.category===filter)
+    .filter(m => filter === 'all' || m.category === filter)
     .forEach(m => {
       const card = document.createElement('div');
       card.className = 'doc-item';
@@ -109,31 +97,51 @@ function renderMinutasList() {
     });
 }
 
-// === OPEN DOC ===
-async function openDoc(path, title, isMD=false) {
+// === ABRIR DOCUMENTO ===
+async function openDoc(path, title, isMD = false) {
   homeView.style.display    = 'none';
   minutasView.style.display = 'none';
   viewer.style.display      = 'block';
   document.title = title;
 
   try {
-    const res = await fetch(isMD ? path : path);
+    const res = await fetch(path);
     if (!res.ok) throw new Error(res.status);
     const txt = await res.text();
-    const html = (isMD||path.endsWith('.md'))
+    const content = (isMD || path.endsWith('.md'))
       ? marked.parse(txt)
-      : new DOMParser().parseFromString(txt,'text/html').body.innerHTML;
-    viewer.innerHTML = `<h1>${title}</h1>${html}`;
+      : new DOMParser().parseFromString(txt, 'text/html').body.innerHTML;
+    viewer.innerHTML = `<h1>${title}</h1>${content}`;
     hljs.highlightAll();
   } catch {
-    viewer.innerHTML = `<div class="error-message"><p>Error cargando <strong>${title}</strong></p></div>`;
+    viewer.innerHTML =
+      `<div class="error-message">
+         <p>Error al cargar <strong>${title}</strong></p>
+       </div>`;
   }
 }
 
-// === BOOT ===
+// === EVENTOS & ARRANQUE ===
 window.addEventListener('DOMContentLoaded', () => {
+  // Inicial
   buildHomeList();
   showHome();
+
+  // Grid/List toggles en home
+  document.getElementById('grid-view-btn').onclick = () => {
+    const dl = document.getElementById('docList');
+    dl.classList.add('doc-grid');
+    dl.classList.remove('doc-list');
+  };
+  document.getElementById('list-view-btn').onclick = () => {
+    const dl = document.getElementById('docList');
+    dl.classList.add('doc-list');
+    dl.classList.remove('doc-grid');
+  };
+
+  // Botón “Inicio” desde Minutas
   document.getElementById('home-btn').onclick = showHome;
+
+  // Filtrar Minutas
   document.getElementById('minutas-catFilter').onchange = renderMinutasList;
 });
