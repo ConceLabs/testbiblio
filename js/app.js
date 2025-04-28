@@ -1,18 +1,18 @@
 // === DATOS ===
 const docs = [
-  { file: 'docs/documento1.html',   title: 'CÓDIGO PENAL',                         icon: 'fa-solid fa-gavel' },
-  { file: 'docs/documento2.html',   title: 'CÓDIGO PROCESAL PENAL',                icon: 'fa-solid fa-scale-balanced' },
-  { file: 'docs/documento3.html',   title: 'LEY DE DROGAS',                        icon: 'fa-solid fa-pills' },
-  { file: 'docs/documento4.html',   title: 'LEY DE CONTROL DE ARMAS',              icon: 'fa-solid fa-gun' },
-  { file: 'docs/documento5.html',   title: 'LEY DE PENAS SUSTITUTIVAS',            icon: 'fa-solid fa-person-walking-arrow-right' },
-  { file: 'docs/documento6.html',   title: 'LEY DE VIOLENCIA INTRAFAMILIAR',       icon: 'fa-solid fa-house-user' },
-  { file: 'docs/documento7.html',   title: 'LEY RPA',                              icon: 'fa-solid fa-child' },
-  { file: 'docs/documento8.html',   title: 'LEY RPA (Diferida)',                   icon: 'fa-solid fa-child-reaching' },
-  { file: 'docs/documento9.html',   title: 'LEY DE VIOLENCIA EN LOS ESTADIOS',     icon: 'fa-solid fa-futbol' },
-  { file: 'docs/documento10.html',  title: 'LEY DE TRÁNSITO',                      icon: 'fa-solid fa-car' },
-  { file: 'docs/documento11.html',  title: 'LEY ORGÁNICA DEL MINISTERIO PÚBLICO',  icon: 'fa-solid fa-building-columns' },
-  { file: 'calculadora_abonos.html', title: 'Calculadora Abonos por Arresto',      icon: 'fa-solid fa-calculator' },
-  { file: 'minutas',                title: 'Minutas Jurisprudencia',               icon: 'fa-solid fa-book-bookmark' }
+  { file: 'docs/documento1.html',   title: 'CÓDIGO PENAL',                       icon: 'fa-solid fa-gavel' },
+  { file: 'docs/documento2.html',   title: 'CÓDIGO PROCESAL PENAL',              icon: 'fa-solid fa-scale-balanced' },
+  { file: 'docs/documento3.html',   title: 'LEY DE DROGAS',                      icon: 'fa-solid fa-pills' },
+  { file: 'docs/documento4.html',   title: 'LEY DE CONTROL DE ARMAS',            icon: 'fa-solid fa-gun' },
+  { file: 'docs/documento5.html',   title: 'LEY DE PENAS SUSTITUTIVAS',          icon: 'fa-solid fa-person-walking-arrow-right' },
+  { file: 'docs/documento6.html',   title: 'LEY DE VIOLENCIA INTRAFAMILIAR',     icon: 'fa-solid fa-house-user' },
+  { file: 'docs/documento7.html',   title: 'LEY RPA',                            icon: 'fa-solid fa-child' },
+  { file: 'docs/documento8.html',   title: 'LEY RPA (Diferida)',                 icon: 'fa-solid fa-child-reaching' },
+  { file: 'docs/documento9.html',   title: 'LEY DE VIOLENCIA EN LOS ESTADIOS',   icon: 'fa-solid fa-futbol' },
+  { file: 'docs/documento10.html',  title: 'LEY DE TRÁNSITO',                    icon: 'fa-solid fa-car' },
+  { file: 'docs/documento11.html',  title: 'LEY ORGÁNICA DEL MINISTERIO PÚBLICO',icon: 'fa-solid fa-building-columns' },
+  { file: 'calculadora_abonos.html', title: 'Calculadora Abonos por Arresto',    icon: 'fa-solid fa-calculator' },
+  { file: 'minutas',                title: 'Minutas Jurisprudencia',             icon: 'fa-solid fa-book-bookmark' }
 ];
 
 const docsMinutas = [
@@ -50,12 +50,12 @@ const docsMinutas = [
   { path: 'minutas/32_INSTRUCCION_SOBRE_PRIMERAS_DILIGENCIAS.md',  title: 'N° 32 INSTRUCCIÓN SOBRE PRIMERAS DILIGENCIAS',             category: 'Diligencias e Investigación' }
 ];
 
-// === REFERENCIAS A VISTAS ===
+// === REFERENCIAS ===
 const homeView    = document.getElementById('home-view');
-const minutasView = document.getElementById('minutas-view');
 const viewer      = document.getElementById('viewer');
+const minutasView = document.getElementById('minutas-view');
 
-// === NAVEGACIÓN SPA ===
+// === SPA NAVIGATION ===
 function showHome() {
   minutasView.style.display = 'none';
   viewer.style.display      = 'none';
@@ -69,10 +69,10 @@ function showMinutas() {
   viewer.style.display      = 'none';
   minutasView.style.display = 'block';
   renderMinutasList();
-  document.title = 'Minutas de Jurisprudencia';
+  document.title = 'Minutas Jurisprudencia';
 }
 
-// === BUILD HOME LIST ===
+// === HOME LIST ===
 function buildHomeList() {
   const list = document.getElementById('docList');
   list.innerHTML = '';
@@ -83,68 +83,57 @@ function buildHomeList() {
       <div class="doc-icon"><i class="${d.icon}"></i></div>
       <div class="doc-title">${d.title}</div>`;
     if (d.file === 'minutas') {
-      card.addEventListener('click', showMinutas);
+      card.onclick = showMinutas;
     } else {
-      card.addEventListener('click', () => openDoc(d.file, d.title));
+      card.onclick = () => openDoc(d.file, d.title);
     }
     list.appendChild(card);
   });
 }
 
-// === RENDER MINUTAS LIST ===
+// === MINUTAS LIST ===
 function renderMinutasList() {
   const list   = document.getElementById('minutas-docList');
   const filter = document.getElementById('minutas-catFilter').value;
   list.innerHTML = '';
   docsMinutas
-    .filter(m => filter === 'all' || m.category === filter)
+    .filter(m => filter==='all' || m.category===filter)
     .forEach(m => {
       const card = document.createElement('div');
       card.className = 'doc-item';
       card.innerHTML = `
         <div class="doc-title">${m.title}</div>
         <div class="doc-category">${m.category}</div>`;
-      card.addEventListener('click', () => openDoc(m.path, m.title, true));
+      card.onclick = () => openDoc(m.path, m.title, true);
       list.appendChild(card);
     });
 }
 
-// === OPEN DOCUMENT (HTML o MD) ===
-async function openDoc(path, title, isMD = false) {
+// === OPEN DOC ===
+async function openDoc(path, title, isMD=false) {
   homeView.style.display    = 'none';
   minutasView.style.display = 'none';
   viewer.style.display      = 'block';
-
   document.title = title;
-  const url = isMD || path.endsWith('.md')
-    ? path
-    : (path === 'minutas' ? 'minutas.html' : `docs/${path}`);
 
   try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Status ${res.status}`);
-    const txt  = await res.text();
-    const html = (isMD || path.endsWith('.md'))
+    const res = await fetch(isMD ? path : path);
+    if (!res.ok) throw new Error(res.status);
+    const txt = await res.text();
+    const html = (isMD||path.endsWith('.md'))
       ? marked.parse(txt)
-      : new DOMParser().parseFromString(txt, 'text/html').body.innerHTML;
+      : new DOMParser().parseFromString(txt,'text/html').body.innerHTML;
     viewer.innerHTML = `<h1>${title}</h1>${html}`;
     hljs.highlightAll();
-  } catch (err) {
-    viewer.innerHTML = `<div class="error-message"><p>Error al cargar <strong>${title}</strong></p></div>`;
+  } catch {
+    viewer.innerHTML = `<div class="error-message"><p>Error cargando <strong>${title}</strong></p></div>`;
   }
 }
 
-// === EVENTOS & ARRANQUE ===
+// === BOOT ===
 window.addEventListener('DOMContentLoaded', () => {
   buildHomeList();
   showHome();
-
-  document.getElementById('home-btn')?.addEventListener('click', showHome);
-  document.getElementById('minutas-catFilter')?.addEventListener('change', renderMinutasList);
-  document.getElementById('minutas-grid-btn')?.addEventListener('click', renderMinutasList);
-  document.getElementById('minutas-list-btn')?.addEventListener('click', renderMinutasList);
-
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js').catch(console.error);
-  }
+  document.getElementById('home-btn').onclick = showHome;
+  document.getElementById('minutas-catFilter').onchange = renderMinutasList;
 });
