@@ -33,35 +33,41 @@
     }
 
     /* 🌟 Ajuste clave: base 0 y flex:1 1 0 para que overflow auto funcione */
-    #app {
-      display:flex;
-      flex-direction:column;
-      flex:1 1 0%;
-      height:0;
-    }
-    #viewer {
-      flex:1 1 0%;
-      height:0;
-      overflow-y:auto;
-      display:none;
-      padding:1rem;
-      background:#fff;
-      line-height:1.5;
-    }
-    #minutas-view {
-      display:none;
-      flex-direction:column;
-      flex:1 1 0%;
-      height:0;
-      overflow-y:auto;
-    }
-    #minutas-viewer {
-      flex:1 1 0%;
-      height:0;
-      overflow-y:auto;
-      padding:0 .75rem .75rem .75rem;
-      line-height:1.6;
-    }
+    /* → El contenedor principal SPA */
+    
+  #app {
+    display: flex;
+    flex-direction: column;
+    flex: 1;        /* ocupa todo el espacio sobrante */
+    min-height: 0;  /* permite que overflow funcione */
+  }
+
+  /* → Panel donde mostramos HTML/MD */
+  #viewer {
+    flex: 1;
+    min-height: 0;  /* clave para que overflow-y active el scroll */
+    overflow-y: auto;
+    display: none;  /* se muestra mediante JS */
+    padding: 1rem;
+    background: #fff;
+    line-height: 1.5;
+  }
+
+  /* → Contenedor de Minutas (flex children igual) */
+  #minutas-view {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  #minutas-viewer {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 .75rem .75rem .75rem;
+    line-height: 1.6;
+  }
     /* —————————————————————————————————————————— */
 
     /* barra de búsqueda siempre visible */
