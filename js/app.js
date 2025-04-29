@@ -233,7 +233,7 @@ async function openDoc(path, title, isMinuta = false) {
 // === GESTIÓN DE FUENTE Y ZOOM ===
 function changeFont(delta) {
   // Variables para el tamaño de fuente
-  const fontSizes = ['small', 'medium', 'large', 'xlarge'];
+  const fontSizes = ['small', 'medium', 'large', 'xlarge', 'xxlarge', 'xxxlarge'];
   
   // Obtener el índice actual de tamaño de fuente
   let currentFontIndex = 1; // Por defecto medium
