@@ -394,12 +394,14 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   
   // Restaurar tamaño de fuente preferido
-  const savedSize = localStorage.getItem('preferredFontSize');
-  if (savedSize) {
-    // Eliminar cualquier clase de tamaño existente
-    ['small', 'medium', 'large', 'xlarge'].forEach(size => {
-      document.body.classList.remove('font-size-' + size);
-    });
+const savedSize = localStorage.getItem('preferredFontSize');
+if (savedSize) {
+  ['small', 'medium', 'large', 'xlarge', 'xxlarge', 'xxxlarge']
+    .forEach(size => document.body.classList.remove('font-size-' + size));
+  document.body.classList.add('font-size-' + savedSize);
+} else {
+  document.body.classList.add('font-size-medium');
+}
     // Aplicar el tamaño guardado
     document.body.classList.add('font-size-' + savedSize);
   } else {
