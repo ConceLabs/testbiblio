@@ -20,8 +20,15 @@ const minutasViewer = document.getElementById('minutas-viewer');
 const searchInput = document.getElementById('search');
 const searchPanel = document.getElementById('search-results');
 const resultCounter = document.getElementById('result-counter');
+const prevResultBtn = document.getElementById('prev-result');
+const nextResultBtn = document.getElementById('next-result');
+const closeSearchBtn = document.getElementById('close-search');
 
+// Variables para el estado de la aplicación
+let currentView = 'home'; // 'home', 'doc', 'minutas', 'minutasDoc'
 let highlights = [], currentHit = -1, lastTerm = '';
+let lastDocPath = null; // Para recordar el último documento abierto
+let lastMinutasCategory = null; // Para recordar la última categoría de minutas
 
 // === NAVEGACIÓN SPA ===
 function showHome() {
@@ -30,6 +37,11 @@ function showHome() {
   viewer.style.display = 'none';
   minutasView.style.display = 'none';
   viewToolbar.style.display = 'flex';
+  minutasViewer.style.display = 'none';
+  
+  currentView = 'home';
+  document.title = 'Biblioteca Jurídica – ANF';
+  clearSearch();
 }
 
 function showMinutas() {
@@ -38,7 +50,31 @@ function showMinutas() {
   viewer.style.display = 'none';
   minutasView.style.display = 'flex';
   viewToolbar.style.display = 'none';
+  minutasViewer.style.display = 'none';
+  
+  currentView = 'minutas';
+  document.title = 'Minutas Jurisprudencia – ANF';
   renderMinutasList();
+  lastMinutasCategory = minutasCatFilter.value;
+  clearSearch();
+}
+
+function goBack() {
+  switch (currentView) {
+    case 'doc':
+      showHome();
+      break;
+    case 'minutasDoc':
+      showMinutas();
+      // Restaurar la última categoría seleccionada
+      if (lastMinutasCategory) {
+        minutasCatFilter.value = lastMinutasCategory;
+        renderMinutasList();
+      }
+      break;
+    default:
+      showHome();
+  }
 }
 
 // === DOCUMENTOS PRINCIPALES ===
@@ -48,6 +84,12 @@ const docs = [
   { file: 'docs/documento3.html', title: 'LEY DE DROGAS', icon: 'fa-solid fa-pills' },
   { file: 'docs/documento4.html', title: 'LEY DE CONTROL DE ARMAS', icon: 'fa-solid fa-gun' },
   { file: 'docs/documento5.html', title: 'LEY DE PENAS SUSTITUTIVAS', icon: 'fa-solid fa-person-walking-arrow-right' },
+  { file: 'documento6.html', title: 'LEY DE VIOLENCIA INTRAFAMILIAR', icon: 'fa-solid fa-house-user' },
+  { file: 'documento7.html', title: 'LEY RPA', icon: 'fa-solid fa-child' },
+  { file: 'documento8.html', title: 'LEY RPA (Diferida)', icon: 'fa-solid fa-child-reaching' },
+  { file: 'documento9.html', title: 'LEY DE VIOLENCIA EN LOS ESTADIOS', icon: 'fa-solid fa-futbol' },
+  { file: 'documento10.html', title: 'LEY DE TRANSITO', icon: 'fa-solid fa-car' },
+  { file: 'documento11.html', title: 'LEY ORGANICA DEL MINISTERIO PUBLICO', icon: 'fa-solid fa-building-columns' },
   { file: 'docs/calculadora_abonos.html', title: 'Calculadora Abonos por Arresto', icon: 'fa-solid fa-calculator' },
   { file: 'minutas', title: 'Minutas Jurisprudencia', icon: 'fa-solid fa-book-bookmark' }
 ];
@@ -93,7 +135,7 @@ const docsMinutas = [
   { path: 'minutas/24_Reclamos_por_infracción_de_garantías_de_terceros.md', title: 'N° 24 RECLAMOS POR INFRACCIÓN DE GARANTÍAS DE TERCEROS', category: 'Procedimiento y Garantías' },
   { path: 'minutas/25_Porte_o_tenencia_de_una_munición.md', title: 'N° 25 PORTE O TENENCIA DE UNA MUNICIÓN', category: 'Delitos y Tipicidad' },
   { path: 'minutas/26_Delito_continuado_-_reiterado.md', title: 'N° 26 DELITO CONTINUADO - REITERADO', category: 'Delitos y Tipicidad' },
-  { path: 'minutas/26-Delito-continuado-reiterado_.md', title: 'N° 26-DELITO CONTINUADO - REITERADO', category: 'Delitos y Tipicidad' },
+  // Eliminado el documento duplicado: N° 26-DELITO CONTINUADO - REITERADO
   { path: 'minutas/27_Control_viapublica.md', title: 'N° 27 CONTROL DE IDENTIDAD - TRANSACCIÓN EN LA VÍA PÚBLICA', category: 'Control de Identidad' },
   { path: 'minutas/28_Obligatoriedad_del_artículo_302_del_CPP_durante_la_etapa_investigativa.md', title: 'N° 28 OBLIGATORIEDAD DEL ARTÍCULO 302 DEL CPP DURANTE LA ETAPA INVESTIGATIVA', category: 'Procedimiento y Garantías' },
   { path: 'minutas/29_Abuso_sexual_-_Introducción_de_dedos.md', title: 'N° 29 ABUSO SEXUAL - INTRODUCCIÓN DE DEDOS', category: 'Delitos y Tipicidad' },
@@ -117,40 +159,159 @@ function renderMinutasList() {
 }
 
 // === ABRIR DOCUMENTOS ===
-async function openDoc(path, title, isMD = false) {
+async function openDoc(path, title, isMinuta = false) {
+  // Guardamos el path para posible uso en búsqueda
+  lastDocPath = path;
+  
+  // Determinar si es un documento Markdown
+  const isMD = isMinuta || path.endsWith('.md');
+  
+  // Configurar la vista según el tipo de documento
   homeView.style.display = 'none';
   minutasView.style.display = 'none';
   viewToolbar.style.display = 'none';
   docToolbar.classList.remove('hidden');
-  viewer.style.display = 'block';
+  
+  // Mostrar el viewer correcto según tipo de documento
+  if (isMinuta) {
+    viewer.style.display = 'block';
+    minutasViewer.style.display = 'none';
+    currentView = 'minutasDoc';
+  } else {
+    viewer.style.display = 'block';
+    minutasViewer.style.display = 'none';
+    currentView = 'doc';
+  }
 
-  viewer.innerHTML = '<p>Cargando...</p>';
-  document.title = title;
+  // Mostrar indicador de carga
+  viewer.innerHTML = '<div class="loading">Cargando documento...</div>';
+  document.title = title + ' – ANF';
 
   try {
-    const res = await fetch(path);
+    // Establecer un timeout para la carga del documento
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Tiempo de carga excedido')), 10000)
+    );
+    
+    // Cargar el documento
+    const fetchPromise = fetch(path);
+    const res = await Promise.race([fetchPromise, timeoutPromise]);
+    
+    if (!res.ok) {
+      throw new Error(`Error HTTP: ${res.status}`);
+    }
+    
     const txt = await res.text();
-    const html = isMD || path.endsWith('.md') ? marked.parse(txt) : txt;
+    const html = isMD ? marked.parse(txt) : txt;
 
     viewer.innerHTML = `<h1>${title}</h1>${html}`;
 
-    if (!isMD && !path.endsWith('.md')) {
-      Array.from(viewer.children).forEach(child => {
-        child.style.fontSize = 'inherit';
-      });
-    }
-
+    // No aplicar estilo específico a cada elemento hijo, usar CSS para controlar el tamaño
     hljs.highlightAll();
+    
+    // Restaurar búsqueda si hay un término activo
+    if (lastTerm) {
+      performSearch(lastTerm);
+    }
+    
+    // Scroll al inicio
+    viewer.scrollTop = 0;
   } catch (err) {
-    viewer.innerHTML = '<p>Error al cargar el documento.</p>';
+    console.error('Error al cargar el documento:', err);
+    viewer.innerHTML = `
+      <div class="error-container">
+        <h2>Error al cargar el documento</h2>
+        <p>${err.message || 'No se pudo acceder al documento solicitado.'}</p>
+        <button class="btn retry-btn" onclick="openDoc('${path}', '${title}', ${isMinuta})">
+          <i class="fa-solid fa-rotate-right"></i> Reintentar
+        </button>
+      </div>
+    `;
   }
 }
 
-// === ZOOM ===
+// === GESTIÓN DE FUENTE Y ZOOM ===
 function changeFont(delta) {
   const currentSize = parseFloat(getComputedStyle(viewer).fontSize) || 16;
   const newSize = Math.min(28, Math.max(12, currentSize + delta));
   viewer.style.fontSize = newSize + 'px';
+  
+  // Actualizar tamaño para minutas si está visible
+  if (minutasViewer.style.display === 'block') {
+    minutasViewer.style.fontSize = newSize + 'px';
+  }
+}
+
+// === BÚSQUEDA ===
+function clearSearch() {
+  highlights = [];
+  currentHit = -1;
+  lastTerm = '';
+  searchPanel.style.display = 'none';
+  
+  // Eliminar cualquier highlight previo
+  if (viewer.querySelectorAll('.search-highlight').length > 0) {
+    const oldHighlights = viewer.querySelectorAll('.search-highlight');
+    oldHighlights.forEach(el => {
+      const parent = el.parentNode;
+      parent.replaceChild(document.createTextNode(el.textContent), el);
+      parent.normalize();
+    });
+  }
+}
+
+function performSearch(term) {
+  if (!term || term.length < 2) {
+    clearSearch();
+    return;
+  }
+  
+  if (term === lastTerm && highlights.length > 0) {
+    // Simplemente navegar al siguiente resultado
+    navigateSearch(1);
+    return;
+  }
+  
+  // Nuevo término de búsqueda
+  lastTerm = term;
+  clearSearch();
+  
+  // Buscar en el documento actual
+  const content = viewer.innerHTML;
+  const regex = new RegExp(`(${term})`, 'gi');
+  
+  // Resaltar coincidencias
+  viewer.innerHTML = content.replace(regex, '<span class="search-highlight">$1</span>');
+  
+  // Recoger todos los elementos resaltados
+  highlights = Array.from(viewer.querySelectorAll('.search-highlight'));
+  
+  if (highlights.length > 0) {
+    searchPanel.style.display = 'flex';
+    navigateSearch(1); // Ir al primer resultado
+  } else {
+    searchPanel.style.display = 'flex';
+    resultCounter.textContent = 'No hay resultados';
+  }
+}
+
+function navigateSearch(direction) {
+  if (highlights.length === 0) return;
+  
+  // Quitar selección anterior si existe
+  if (currentHit >= 0 && currentHit < highlights.length) {
+    highlights[currentHit].classList.remove('current-hit');
+  }
+  
+  // Actualizar posición
+  currentHit = (currentHit + direction + highlights.length) % highlights.length;
+  
+  // Aplicar nueva selección
+  highlights[currentHit].classList.add('current-hit');
+  highlights[currentHit].scrollIntoView({ behavior: 'smooth', block: 'center' });
+  
+  // Actualizar contador
+  resultCounter.textContent = `${currentHit + 1} de ${highlights.length}`;
 }
 
 // === EVENTOS ===
@@ -158,18 +319,106 @@ window.addEventListener('DOMContentLoaded', () => {
   buildHomeList();
   showHome();
 
+  // Eventos de vista principal
   gridBtn.onclick = () => docList.className = 'doc-grid';
   listBtn.onclick = () => docList.className = 'doc-list';
 
+  // Eventos de zoom
   btnZoomIn.onclick = () => changeFont(1);
   btnZoomOut.onclick = () => changeFont(-1);
 
-  btnBack.onclick = showHome;
+  // Eventos de navegación
+  btnBack.onclick = goBack;
   homeBtn.onclick = showHome;
 
-  minutasCatFilter.onchange = renderMinutasList;
-
-  searchInput.addEventListener('input', () => {
-    // Opcional: funcionalidad de búsqueda en el futuro
+  // Eventos de filtrado de minutas
+  minutasCatFilter.onchange = () => {
+    lastMinutasCategory = minutasCatFilter.value;
+    renderMinutasList();
+  };
+  
+  // Eventos de búsqueda
+  searchInput.addEventListener('input', (e) => {
+    const term = e.target.value.trim();
+    // Retrasar la búsqueda para evitar búsquedas constantes mientras se escribe
+    clearTimeout(searchInput.timeout);
+    searchInput.timeout = setTimeout(() => performSearch(term), 300);
   });
+  
+  // Navegación entre resultados de búsqueda
+  prevResultBtn.addEventListener('click', () => navigateSearch(-1));
+  nextResultBtn.addEventListener('click', () => navigateSearch(1));
+  closeSearchBtn.addEventListener('click', () => {
+    clearSearch();
+    searchInput.value = '';
+  });
+  
+  // Manejar teclas de acceso rápido
+  document.addEventListener('keydown', (e) => {
+    // Ctrl+F para búsqueda
+    if (e.ctrlKey && e.key === 'f') {
+      e.preventDefault();
+      searchInput.focus();
+    }
+    
+    // Escape para cerrar búsqueda
+    if (e.key === 'Escape' && searchPanel.style.display === 'flex') {
+      clearSearch();
+      searchInput.value = '';
+    }
+    
+    // F3 para siguiente resultado
+    if (e.key === 'F3' || (e.ctrlKey && e.key === 'g')) {
+      e.preventDefault();
+      if (highlights.length > 0) {
+        navigateSearch(e.shiftKey ? -1 : 1);
+      }
+    }
+  });
+  
+  // Detectar si hay soporte para Service Worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('Service Worker registrado'))
+        .catch(err => console.error('Error al registrar Service Worker:', err));
+    });
+  }
 });
+
+// Agregar estilos CSS para la búsqueda al cargar la página
+(function() {
+  const style = document.createElement('style');
+  style.textContent = `
+    .search-highlight {
+      background-color: #ffeb3b;
+      border-radius: 2px;
+    }
+    .current-hit {
+      background-color: #ff9800;
+      color: #fff;
+    }
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100px;
+      color: #666;
+    }
+    .error-container {
+      text-align: center;
+      padding: 2rem;
+      color: #d32f2f;
+    }
+    .retry-btn {
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+    }
+  `;
+  document.head.appendChild(style);
+})();
