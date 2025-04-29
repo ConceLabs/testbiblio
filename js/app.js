@@ -232,14 +232,31 @@ async function openDoc(path, title, isMinuta = false) {
 
 // === GESTIÓN DE FUENTE Y ZOOM ===
 function changeFont(delta) {
-  const currentSize = parseFloat(getComputedStyle(viewer).fontSize) || 16;
-  const newSize = Math.min(28, Math.max(12, currentSize + delta));
-  viewer.style.fontSize = newSize + 'px';
+  // Variables para el tamaño de fuente
+  const fontSizes = ['small', 'medium', 'large', 'xlarge'];
   
-  // Actualizar tamaño para minutas si está visible
-  if (minutasViewer.style.display === 'block') {
-    minutasViewer.style.fontSize = newSize + 'px';
+  // Obtener el índice actual de tamaño de fuente
+  let currentFontIndex = 1; // Por defecto medium
+  
+  // Determinar el índice actual basado en las clases del body
+  for (let i = 0; i < fontSizes.length; i++) {
+    if (document.body.classList.contains('font-size-' + fontSizes[i])) {
+      currentFontIndex = i;
+      break;
+    }
   }
+  
+  // Calcular el nuevo índice
+  const newIndex = Math.min(Math.max(currentFontIndex + delta, 0), fontSizes.length - 1);
+  
+  // Eliminar todas las clases de tamaño actuales
+  fontSizes.forEach(size => document.body.classList.remove('font-size-' + size));
+  
+  // Aplicar la nueva clase de tamaño
+  document.body.classList.add('font-size-' + fontSizes[newIndex]);
+  
+  // Guardar la preferencia en localStorage para persistencia
+  localStorage.setItem('preferredFontSize', fontSizes[newIndex]);
 }
 
 // === BÚSQUEDA ===
@@ -376,6 +393,20 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
   
+  // Restaurar tamaño de fuente preferido
+  const savedSize = localStorage.getItem('preferredFontSize');
+  if (savedSize) {
+    // Eliminar cualquier clase de tamaño existente
+    ['small', 'medium', 'large', 'xlarge'].forEach(size => {
+      document.body.classList.remove('font-size-' + size);
+    });
+    // Aplicar el tamaño guardado
+    document.body.classList.add('font-size-' + savedSize);
+  } else {
+    // Si no hay preferencia, usar medium por defecto
+    document.body.classList.add('font-size-medium');
+  }
+  
   // Detectar si hay soporte para Service Worker
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -386,7 +417,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Agregar estilos CSS para la búsqueda al cargar la página
+// Agregar estilos CSS para la búsqueda y el zoom al cargar la página
 (function() {
   const style = document.createElement('style');
   style.textContent = `
@@ -419,6 +450,18 @@ window.addEventListener('DOMContentLoaded', () => {
       border-radius: var(--radius);
       cursor: pointer;
     }
+    
+    /* Estilos mejorados para el zoom */
+    .font-size-small #viewer, .font-size-small #minutas-viewer { font-size: 0.9rem; }
+    .font-size-medium #viewer, .font-size-medium #minutas-viewer { font-size: 1rem; }
+    .font-size-large #viewer, .font-size-large #minutas-viewer { font-size: 1.1rem; }
+    .font-size-xlarge #viewer, .font-size-xlarge #minutas-viewer { font-size: 1.2rem; }
+    
+    /* Asegurarse que el contenido interno también recibe los cambios */
+    .font-size-small #viewer *, .font-size-small #minutas-viewer * { font-size: inherit; }
+    .font-size-medium #viewer *, .font-size-medium #minutas-viewer * { font-size: inherit; }
+    .font-size-large #viewer *, .font-size-large #minutas-viewer * { font-size: inherit; }
+    .font-size-xlarge #viewer *, .font-size-xlarge #minutas-viewer * { font-size: inherit; }
   `;
   document.head.appendChild(style);
 })();
