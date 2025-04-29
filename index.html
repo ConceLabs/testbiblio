@@ -42,48 +42,51 @@
       flex-direction: column;
       background: var(--bg);
       color: var(--text);
+      height: 100%;
+      position: relative;
     }
 
-    /* Contenedores flexibles para scroll */
+    /* Contenedores flexibles para scroll - CORREGIDO */
     #app {
       display: flex;
       flex-direction: column;
-      flex: 1;
-      min-height: 0;
+      height: 100%;
+      width: 100%;
+      position: absolute;
     }
     #home-view {
       display: flex;
       flex-direction: column;
-      flex: 1;
-      min-height: 0;
+      height: 100%;
+      width: 100%;
     }
     #docList {
       flex: 1;
       overflow-y: auto;
-      min-height: 0;
+      padding: 0.75rem;
+      -webkit-overflow-scrolling: touch; /* Para mejor scroll en iOS */
     }
     #viewer {
       display: none;
       flex: 1;
-      min-height: 0;
       overflow-y: auto;
       padding: 1rem;
       background: #fff;
       line-height: 1.5;
+      -webkit-overflow-scrolling: touch;
     }
     #minutas-view {
       display: none;
       flex-direction: column;
-      flex: 1;
-      min-height: 0;
-      overflow-y: auto;
+      height: 100%;
+      width: 100%;
     }
     #minutas-viewer {
       flex: 1;
-      min-height: 0;
       overflow-y: auto;
       padding: 0 .75rem .75rem .75rem;
       line-height: 1.6;
+      -webkit-overflow-scrolling: touch;
     }
 
     /* Barra de búsqueda fija */
@@ -92,6 +95,7 @@
       color: #fff;
       padding: 1rem;
       z-index: 10;
+      flex-shrink: 0; /* Evita que la cabecera se comprima */
     }
     header.main-search .title-bar h1 { font-size: 1.4rem; }
     header.main-search .search-bar {
@@ -119,6 +123,7 @@
       background: #e8ebf0;
       padding: .75rem;
       border-bottom: 1px solid rgba(0,0,0,0.1);
+      flex-shrink: 0; /* Evita que la barra de herramientas se comprima */
     }
     .toolbar.hidden { display: none; }
     .btn {
@@ -141,11 +146,13 @@
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: .75rem;
+      padding-bottom: 20px; /* Espacio en la parte inferior para scroll */
     }
     .doc-list {
       display: flex;
       flex-direction: column;
       gap: .5rem;
+      padding-bottom: 20px;
     }
     .doc-item {
       background: var(--card-bg);
@@ -205,6 +212,7 @@
       background: #e8ebf0;
       padding: .5rem .75rem;
       border-bottom: 1px solid rgba(0,0,0,0.1);
+      flex-shrink: 0;
     }
     #doc-toolbar.hidden { display: none; }
     #doc-toolbar .zoom-btn {
@@ -219,6 +227,7 @@
       padding: .75rem;
       display: flex;
       align-items: center;
+      flex-shrink: 0;
     }
     .home-btn {
       margin-left: auto;
@@ -240,12 +249,16 @@
       border: 1px solid #ccc;
       border-radius: var(--radius);
       margin: 1rem 0;
+      flex-shrink: 0;
     }
     #minutas-docList {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: .75rem;
       padding: 0 .75rem;
+      overflow-y: auto;
+      flex: 1;
+      -webkit-overflow-scrolling: touch;
     }
   </style>
 </head>
