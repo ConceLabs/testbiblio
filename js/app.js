@@ -1,20 +1,78 @@
-// === DATOS ===
+// === ELEMENTOS DEL DOM ===
+const homeView = document.getElementById('home-view');
+const viewToolbar = document.getElementById('view-toolbar');
+const gridBtn = document.getElementById('grid-view-btn');
+const listBtn = document.getElementById('list-view-btn');
+const docList = document.getElementById('docList');
+
+const docToolbar = document.getElementById('doc-toolbar');
+const btnBack = document.getElementById('btn-back');
+const btnZoomIn = document.getElementById('btn-font-increase');
+const btnZoomOut = document.getElementById('btn-font-decrease');
+const viewer = document.getElementById('viewer');
+
+const minutasView = document.getElementById('minutas-view');
+const homeBtn = document.getElementById('home-btn');
+const minutasCatFilter = document.getElementById('minutas-catFilter');
+const minutasDocList = document.getElementById('minutas-docList');
+const minutasViewer = document.getElementById('minutas-viewer');
+
+const searchInput = document.getElementById('search');
+const searchPanel = document.getElementById('search-results');
+const resultCounter = document.getElementById('result-counter');
+
+let highlights = [], currentHit = -1, lastTerm = '';
+
+// === NAVEGACIÓN SPA ===
+function showHome() {
+  homeView.style.display = 'block';
+  docToolbar.classList.add('hidden');
+  viewer.style.display = 'none';
+  minutasView.style.display = 'none';
+  viewToolbar.style.display = 'flex';
+}
+
+function showMinutas() {
+  homeView.style.display = 'none';
+  docToolbar.classList.add('hidden');
+  viewer.style.display = 'none';
+  minutasView.style.display = 'flex';
+  viewToolbar.style.display = 'none';
+  renderMinutasList();
+}
+
+// === DOCUMENTOS PRINCIPALES ===
 const docs = [
-  { file: 'docs/documento1.html',    title: 'CÓDIGO PENAL',                        icon: 'fa-solid fa-gavel' },
-  { file: 'docs/documento2.html',    title: 'CÓDIGO PROCESAL PENAL',               icon: 'fa-solid fa-scale-balanced' },
-  { file: 'docs/documento3.html',    title: 'LEY DE DROGAS',                       icon: 'fa-solid fa-pills' },
-  { file: 'docs/documento4.html',    title: 'LEY DE CONTROL DE ARMAS',             icon: 'fa-solid fa-gun' },
-  { file: 'docs/documento5.html',    title: 'LEY DE PENAS SUSTITUTIVAS',           icon: 'fa-solid fa-person-walking-arrow-right' },
-  { file: 'docs/documento6.html',    title: 'LEY DE VIOLENCIA INTRAFAMILIAR',      icon: 'fa-solid fa-house-user' },
-  { file: 'docs/documento7.html',    title: 'LEY RPA',                             icon: 'fa-solid fa-child' },
-  { file: 'docs/documento8.html',    title: 'LEY RPA (Diferida)',                  icon: 'fa-solid fa-child-reaching' },
-  { file: 'docs/documento9.html',    title: 'LEY DE VIOLENCIA EN LOS ESTADIOS',    icon: 'fa-solid fa-futbol' },
-  { file: 'docs/documento10.html',   title: 'LEY DE TRÁNSITO',                     icon: 'fa-solid fa-car' },
-  { file: 'docs/documento11.html',   title: 'LEY ORGÁNICA DEL MINISTERIO PÚBLICO', icon: 'fa-solid fa-building-columns' },
-  { file: 'docs/calculadora_abonos.html', title: 'Calculadora Abonos por Arresto',    icon: 'fa-solid fa-calculator' },
-  { file: 'minutas',                 title: 'Minutas Jurisprudencia',              icon: 'fa-solid fa-book-bookmark' }
+  { file: 'docs/documento1.html', title: 'CÓDIGO PENAL', icon: 'fa-solid fa-gavel' },
+  { file: 'docs/documento2.html', title: 'CÓDIGO PROCESAL PENAL', icon: 'fa-solid fa-scale-balanced' },
+  { file: 'docs/documento3.html', title: 'LEY DE DROGAS', icon: 'fa-solid fa-pills' },
+  { file: 'docs/documento4.html', title: 'LEY DE CONTROL DE ARMAS', icon: 'fa-solid fa-gun' },
+  { file: 'docs/documento5.html', title: 'LEY DE PENAS SUSTITUTIVAS', icon: 'fa-solid fa-person-walking-arrow-right' },
+  { file: 'docs/documento6.html', title: 'LEY DE VIOLENCIA INTRAFAMILIAR', icon: 'fa-solid fa-house-user' },
+  { file: 'docs/documento7.html', title: 'LEY RPA', icon: 'fa-solid fa-child' },
+  { file: 'docs/documento8.html', title: 'LEY RPA (Diferida)', icon: 'fa-solid fa-child-reaching' },
+  { file: 'docs/documento9.html', title: 'LEY DE VIOLENCIA EN LOS ESTADIOS', icon: 'fa-solid fa-futbol' },
+  { file: 'docs/documento10.html', title: 'LEY DE TRÁNSITO', icon: 'fa-solid fa-car' },
+  { file: 'docs/documento11.html', title: 'LEY ORGÁNICA DEL MINISTERIO PÚBLICO', icon: 'fa-solid fa-building-columns' },
+  { file: 'docs/calculadora_abonos.html', title: 'Calculadora Abonos por Arresto', icon: 'fa-solid fa-calculator' },
+  { file: 'minutas', title: 'Minutas Jurisprudencia', icon: 'fa-solid fa-book-bookmark' }
 ];
 
+function buildHomeList() {
+  docList.innerHTML = '';
+  docs.forEach(doc => {
+    const card = document.createElement('div');
+    card.className = 'doc-item';
+    card.innerHTML = `<div class="doc-icon"><i class="${doc.icon}"></i></div><div class="doc-title">${doc.title}</div>`;
+    card.onclick = () => {
+      if (doc.file === 'minutas') showMinutas();
+      else openDoc(doc.file, doc.title);
+    };
+    docList.appendChild(card);
+  });
+}
+
+// === DOCUMENTOS MINUTAS ===
 const docsMinutas = [
   { path: 'minutas/2_CONTROL_DE_IDENTIDAD-LEY_DE_TRANSITO_C.md',      title: 'N° 2 CONTROL DE IDENTIDAD - LEY DE TRÁNSITO',               category: 'Control de Identidad' },
   { path: 'minutas/3_ACCESO_A_INFORMACION_EN_FACEBOOK.md',            title: 'N° 3 ACCESO A INFORMACIÓN EN FACEBOOK',                    category: 'Diligencias e Investigación' },
@@ -76,69 +134,6 @@ const docsMinutas = [
     title: 'N° 32 INSTRUCCIÓN SOBRE PRIMERAS DILIGENCIAS',          category: 'Diligencias e Investigación' }
 ];
 
-// === ELEMENTOS DEL DOM ===
-const homeView        = document.getElementById('home-view');
-const viewToolbar     = document.getElementById('view-toolbar');
-const gridBtn         = document.getElementById('grid-view-btn');
-const listBtn         = document.getElementById('list-view-btn');
-const docList         = document.getElementById('docList');
-
-const docToolbar      = document.getElementById('doc-toolbar');
-const btnBack         = document.getElementById('btn-back');
-const btnZoomIn       = document.getElementById('btn-font-increase');
-const btnZoomOut      = document.getElementById('btn-font-decrease');
-const viewer          = document.getElementById('viewer');
-
-const minutasView     = document.getElementById('minutas-view');
-const homeBtn         = document.getElementById('home-btn');
-const minutasCatFilter= document.getElementById('minutas-catFilter');
-const minutasDocList  = document.getElementById('minutas-docList');
-const minutasViewer   = document.getElementById('minutas-viewer');
-
-const searchInput     = document.getElementById('search');
-const searchPanel     = document.getElementById('search-results');
-const resultCounter   = document.getElementById('result-counter');
-
-let highlights = [], currentHit = -1, lastTerm = '';
-
-// — SPA Navigation —
-function showHome() {
-  homeView.style.display    = 'block';
-  docToolbar.classList.add('hidden');
-  viewer.style.display      = 'none';
-  minutasView.style.display = 'none';
-  searchPanel.style.display = 'none';
-  viewToolbar.style.display = 'flex';
-  buildHomeList();
-  document.title = 'Biblioteca Jurídica – ANF';
-}
-
-function showMinutas() {
-  homeView.style.display    = 'none';
-  docToolbar.classList.add('hidden');
-  viewer.style.display      = 'none';
-  minutasView.style.display = 'block';
-  viewToolbar.style.display = 'none';
-  renderMinutasList();
-  document.title = 'Minutas Jurisprudencia';
-}
-
-// — Build Home —
-function buildHomeList() {
-  docList.innerHTML = '';
-  docs.forEach(d => {
-    const card = document.createElement('div');
-    card.className = 'doc-item';
-    card.innerHTML = `<div class="doc-icon"><i class="${d.icon}"></i></div>
-                      <div class="doc-title">${d.title}</div>`;
-    card.onclick = (d.file === 'minutas')
-      ? showMinutas
-      : () => openDoc(d.file, d.title);
-    docList.appendChild(card);
-  });
-}
-
-// — Render Minutas —
 function renderMinutasList() {
   minutasDocList.innerHTML = '';
   const filter = minutasCatFilter.value;
@@ -147,71 +142,58 @@ function renderMinutasList() {
     .forEach(m => {
       const card = document.createElement('div');
       card.className = 'doc-item';
-      card.innerHTML = `<div class="doc-title">${m.title}</div>
-                        <div class="doc-category">${m.category}</div>`;
+      card.innerHTML = `<div class="doc-title">${m.title}</div><div class="doc-category">${m.category}</div>`;
       card.onclick = () => openDoc(m.path, m.title, true);
       minutasDocList.appendChild(card);
     });
 }
 
-// — Open Doc or MD —
-async function openDoc(path, title, isMD = false) {
-  homeView.style.display    = 'none';
+// === ABRIR DOCUMENTOS ===
+async function openDoc(path, title, isMD=false) {
+  homeView.style.display = 'none';
   minutasView.style.display = 'none';
   viewToolbar.style.display = 'none';
   docToolbar.classList.remove('hidden');
+  viewer.style.display = 'block';
 
-  // ¡La clave! forzamos el flex‐child y el overflow desde el JS también
-  viewer.style.display      = 'block';
-  viewer.scrollTop          = 0;
-  viewer.style.overflowY    = 'auto';
-
+  viewer.innerHTML = '<p>Cargando...</p>';
   document.title = title;
-
-  // reset búsqueda + zoom
-  highlights = []; currentHit = -1; lastTerm = '';
-  searchPanel.style.display = 'none';
-  viewer.style.fontSize = '16px';
 
   try {
     const res = await fetch(path);
-    if (!res.ok) throw new Error(res.status);
-    const txt  = await res.text();
-    const html = isMD || path.endsWith('.md')
-      ? marked.parse(txt)
-      : new DOMParser().parseFromString(txt, 'text/html').body.innerHTML;
-
+    const txt = await res.text();
+    const html = isMD || path.endsWith('.md') ? marked.parse(txt) : txt;
     viewer.innerHTML = `<h1>${title}</h1>${html}`;
-    // ajustar rutas de imágenes
-    viewer.querySelectorAll('img').forEach(img=>{
-      const src = img.getAttribute('src');
-      if (src && !/^(https?:|\/)/.test(src)) img.src = `docs/${src}`;
-    });
     hljs.highlightAll();
-  } catch {
-    viewer.innerHTML = `<div class="error-message">
-                          <p>Error cargando <strong>${title}</strong></p>
-                        </div>`;
+  } catch (err) {
+    viewer.innerHTML = '<p>Error al cargar el documento.</p>';
   }
 }
 
-// — Search —
-function escapeRx(s){ return s.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&'); }
-function scrollToHit(i){ /* igual */ }
-function doSearch(){ /* igual */ }
+// === ZOOM ===
+function changeFont(delta) {
+  const currentSize = parseFloat(getComputedStyle(viewer).fontSize) || 16;
+  const newSize = Math.min(28, Math.max(12, currentSize + delta));
+  viewer.style.fontSize = newSize + 'px';
+}
 
-// — Zoom —
-function changeFont(delta){ /* igual */ }
-
-// — Events & Init —
-window.addEventListener('DOMContentLoaded',()=>{
+// === EVENTOS ===
+window.addEventListener('DOMContentLoaded', () => {
   buildHomeList();
   showHome();
-  gridBtn.onclick = ()=> docList.classList.replace('doc-list','doc-grid');
-  listBtn.onclick = ()=> docList.classList.replace('doc-grid','doc-list');
-  btnZoomIn.onclick  = ()=> changeFont(1);
-  btnZoomOut.onclick = ()=> changeFont(-1);
+
+  gridBtn.onclick = () => docList.className = 'doc-grid';
+  listBtn.onclick = () => docList.className = 'doc-list';
+
+  btnZoomIn.onclick = () => changeFont(1);
+  btnZoomOut.onclick = () => changeFont(-1);
+
   btnBack.onclick = showHome;
   homeBtn.onclick = showHome;
-  /* búsqueda y resultados igual */
+
+  minutasCatFilter.onchange = renderMinutasList;
+
+  searchInput.addEventListener('input', () => {
+    // Opcional: funcionalidad de búsqueda
+  });
 });
