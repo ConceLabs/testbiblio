@@ -138,6 +138,7 @@ async function openDoc(path, title, isMD=false) {
     const txt = await res.text();
     const html = isMD || path.endsWith('.md') ? marked.parse(txt) : txt;
     viewer.innerHTML = `<h1>${title}</h1>${html}`;
+    viewer.querySelectorAll('*').forEach(el => el.style.fontSize = 'inherit');
     hljs.highlightAll();
   } catch (err) {
     viewer.innerHTML = '<p>Error al cargar el documento.</p>';
