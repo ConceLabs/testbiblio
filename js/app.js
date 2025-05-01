@@ -18,68 +18,19 @@ const minutasDocList = document.getElementById('minutas-docList');
 const minutasViewer = document.getElementById('minutas-viewer');
 
 const searchInput = document.getElementById('search');
-const searchPanel = document.getElementById('search-results');
+const searchResults = document.getElementById('search-results');
+const prevResult = document.getElementById('prev-result');
+const nextResult = document.getElementById('next-result');
 const resultCounter = document.getElementById('result-counter');
-const prevResultBtn = document.getElementById('prev-result');
-const nextResultBtn = document.getElementById('next-result');
-const closeSearchBtn = document.getElementById('close-search');
+const closeSearch = document.getElementById('close-search');
 
-// Variables para el estado de la aplicación
-let currentView = 'home'; // 'home', 'doc', 'minutas', 'minutasDoc'
-let highlights = [], currentHit = -1, lastTerm = '';
-let lastDocPath = null; // Para recordar el último documento abierto
-let lastMinutasCategory = null; // Para recordar la última categoría de minutas
+let currentDocs = [];
+let currentIndex = -1;
+let matches = [];
 
-// === NAVEGACIÓN SPA ===
-function showHome() {
-  homeView.style.display = 'block';
-  docToolbar.classList.add('hidden');
-  viewer.style.display = 'none';
-  minutasView.style.display = 'none';
-  viewToolbar.style.display = 'flex';
-  minutasViewer.style.display = 'none';
-  
-  currentView = 'home';
-  document.title = 'Biblioteca Jurídica – ANF';
-  clearSearch();
-}
-
-function showMinutas() {
-  homeView.style.display = 'none';
-  docToolbar.classList.add('hidden');
-  viewer.style.display = 'none';
-  minutasView.style.display = 'flex';
-  viewToolbar.style.display = 'none';
-  minutasViewer.style.display = 'none';
-  
-  currentView = 'minutas';
-  document.title = 'Minutas Jurisprudencia – ANF';
-  renderMinutasList();
-  lastMinutasCategory = minutasCatFilter.value;
-  clearSearch();
-}
-
-function goBack() {
-  switch (currentView) {
-    case 'doc':
-      showHome();
-      break;
-    case 'minutasDoc':
-      showMinutas();
-      // Restaurar la última categoría seleccionada
-      if (lastMinutasCategory) {
-        minutasCatFilter.value = lastMinutasCategory;
-        renderMinutasList();
-      }
-      break;
-    default:
-      showHome();
-  }
-}
-
-// === DOCUMENTOS PRINCIPALES ===
+// === DATOS DE DOCUMENTOS ===
 const docs = [
-      { file: 'docs/documento2.html', title: 'CÓDIGO PROCESAL PENAL', icon: 'fa-solid fa-scale-balanced' },
+  { file: 'docs/documento2.html', title: 'CÓDIGO PROCESAL PENAL', icon: 'fa-solid fa-scale-balanced' },
       { file: 'docs/documento3.html', title: 'LEY DE DROGAS', icon: 'fa-solid fa-pills' },
       { file: 'docs/documento4.html', title: 'LEY DE CONTROL DE ARMAS', icon: 'fa-solid fa-gun' },
       { file: 'docs/documento5.html', title: 'LEY DE PENAS SUSTITUTIVAS', icon: 'fa-solid fa-person-walking-arrow-right' },
@@ -143,324 +94,174 @@ const docsMinutas = [
   { path: 'minutas/32_INSTRUCCION_SOBRE_PRIMERAS_DILIGENCIAS.md', title: 'N° 32 INSTRUCCIÓN SOBRE PRIMERAS DILIGENCIAS', category: 'Diligencias e Investigación' }
 ];
 
-function renderMinutasList() {
+// === FUNCIONES DE UTILIDAD ===
+function clearView() {
+  viewer.innerHTML = '';
+  matches = [];
+  currentIndex = -1;
+  searchResults.style.display = 'none';
+}
+
+function showHome() {
+  minutasView.style.display = 'none';
+  viewer.style.display = 'none';
+  docToolbar.classList.add('hidden');
+  homeView.style.display = 'flex';
+  loadDocs();
+}
+
+function showMinutas() {
+  homeView.style.display = 'none';
+  viewer.style.display = 'none';
+  docToolbar.classList.add('hidden');
+  minutasView.style.display = 'flex';
+  loadMinutas();
+}
+
+function openDoc(file, title) {
+  homeView.style.display = 'none';
+  minutasView.style.display = 'none';
+  docToolbar.classList.remove('hidden');
+  viewer.style.display = 'block';
+  clearView();
+  marked.setOptions({ highlight: code => hljs.highlightAuto(code).value });
+  fetch(`docs/${file}`)
+    .then(res => res.text())
+    .then(md => {
+      viewer.innerHTML = marked(md);
+      document.title = `${title} – Biblioteca Jurídica`;
+    })
+    .catch(err => {
+      viewer.innerHTML = `<div class="error-container">
+        <p>Error al cargar el documento.</p>
+        <button class="retry-btn" onclick="openDoc('${file}', '${title}')">Reintentar</button>
+      </div>`;
+    });
+}
+
+function loadDocs() {
+  docList.innerHTML = '';
+  docs.forEach(doc => {
+    const card = document.createElement('div');
+    card.className = 'doc-item';
+    card.innerHTML = `<div class="doc-icon"><i class="${doc.icon}"></i></div><div class="doc-title">${doc.title}</div>`;
+    card.onclick = () => openDoc(doc.file, doc.title);
+    docList.appendChild(card);
+  });
+}
+
+function loadMinutas() {
   minutasDocList.innerHTML = '';
-  const filter = minutasCatFilter.value;
   docsMinutas
-    .filter(m => filter === 'all' || m.category === filter)
-    .forEach(m => {
+    .filter(d => minutasCatFilter.value === 'all' || d.category === minutasCatFilter.value)
+    .forEach(doc => {
       const card = document.createElement('div');
       card.className = 'doc-item';
-      card.innerHTML = `<div class="doc-title">${m.title}</div><div class="doc-category">${m.category}</div>`;
-      card.onclick = () => openDoc(m.path, m.title, true);
+      card.innerHTML = `<div class="doc-title">${doc.title}</div><div class="doc-category">${doc.category}</div>`;
+      card.onclick = () => openDoc(doc.path, doc.title);
       minutasDocList.appendChild(card);
     });
 }
 
-// === ABRIR DOCUMENTOS ===
-async function openDoc(path, title, isMinuta = false) {
-  // Guardamos el path para posible uso en búsqueda
-  lastDocPath = path;
-  
-  // Determinar si es un documento Markdown
-  const isMD = isMinuta || path.endsWith('.md');
-  
-  // Configurar la vista según el tipo de documento
-  homeView.style.display = 'none';
-  minutasView.style.display = 'none';
-  viewToolbar.style.display = 'none';
-  docToolbar.classList.remove('hidden');
-  
-  // Mostrar el viewer correcto según tipo de documento
-  if (isMinuta) {
-    viewer.style.display = 'block';
-    minutasViewer.style.display = 'none';
-    currentView = 'minutasDoc';
-  } else {
-    viewer.style.display = 'block';
-    minutasViewer.style.display = 'none';
-    currentView = 'doc';
-  }
-
-  // Mostrar indicador de carga
-  viewer.innerHTML = '<div class="loading">Cargando documento...</div>';
-  document.title = title + ' – ANF';
-
-  try {
-    // Establecer un timeout para la carga del documento
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Tiempo de carga excedido')), 10000)
-    );
-    
-    // Cargar el documento
-    const fetchPromise = fetch(path);
-    const res = await Promise.race([fetchPromise, timeoutPromise]);
-    
-    if (!res.ok) {
-      throw new Error(`Error HTTP: ${res.status}`);
-    }
-    
-    const txt = await res.text();
-    const html = isMD ? marked.parse(txt) : txt;
-
-    viewer.innerHTML = `<h1>${title}</h1>${html}`;
-
-    // No aplicar estilo específico a cada elemento hijo, usar CSS para controlar el tamaño
-    hljs.highlightAll();
-    
-    // Restaurar búsqueda si hay un término activo
-    if (lastTerm) {
-      performSearch(lastTerm);
-    }
-    
-    // Scroll al inicio
-    viewer.scrollTop = 0;
-  } catch (err) {
-    console.error('Error al cargar el documento:', err);
-    viewer.innerHTML = `
-      <div class="error-container">
-        <h2>Error al cargar el documento</h2>
-        <p>${err.message || 'No se pudo acceder al documento solicitado.'}</p>
-        <button class="btn retry-btn" onclick="openDoc('${path}', '${title}', ${isMinuta})">
-          <i class="fa-solid fa-rotate-right"></i> Reintentar
-        </button>
-      </div>
-    `;
-  }
+function changeView(isGrid) {
+  docList.className = isGrid ? 'doc-grid' : 'doc-list';
+  gridBtn.classList.toggle('active', isGrid);
+  listBtn.classList.toggle('active', !isGrid);
 }
 
-// === GESTIÓN DE FUENTE Y ZOOM ===
-function changeFont(delta) {
-  // Variables para el tamaño de fuente
-  const fontSizes = ['small', 'medium', 'large', 'xlarge'];
-  
-  // Obtener el índice actual de tamaño de fuente
-  let currentFontIndex = 1; // Por defecto medium
-  
-  // Determinar el índice actual basado en las clases del body
-  for (let i = 0; i < fontSizes.length; i++) {
-    if (document.body.classList.contains('font-size-' + fontSizes[i])) {
-      currentFontIndex = i;
-      break;
-    }
-  }
-  
-  // Calcular el nuevo índice
-  const newIndex = Math.min(Math.max(currentFontIndex + delta, 0), fontSizes.length - 1);
-  
-  // Eliminar todas las clases de tamaño actuales
-  fontSizes.forEach(size => document.body.classList.remove('font-size-' + size));
-  
-  // Aplicar la nueva clase de tamaño
-  document.body.classList.add('font-size-' + fontSizes[newIndex]);
-  
-  // Guardar la preferencia en localStorage para persistencia
-  localStorage.setItem('preferredFontSize', fontSizes[newIndex]);
-}
+gridBtn.onclick = () => changeView(true);
+listBtn.onclick = () => changeView(false);
+btnBack.onclick = showHome;
+homeBtn.onclick = showHome;
+minutasCatFilter.onchange = loadMinutas;
+btnZoomIn.onclick = () => document.body.classList.toggle('font-size-large', true);
+btnZoomOut.onclick = () => document.body.classList.toggle('font-size-small', true);
 
-// === BÚSQUEDA ===
-function clearSearch() {
-  highlights = [];
-  currentHit = -1;
-  lastTerm = '';
-  searchPanel.style.display = 'none';
-  
-  // Eliminar cualquier highlight previo
-  if (viewer.querySelectorAll('.search-highlight').length > 0) {
-    const oldHighlights = viewer.querySelectorAll('.search-highlight');
-    oldHighlights.forEach(el => {
-      const parent = el.parentNode;
-      parent.replaceChild(document.createTextNode(el.textContent), el);
-      parent.normalize();
-    });
-  }
-}
-
+// === BÚSQUEDA EN DOCUMENTO ===
 function performSearch(term) {
-  if (!term || term.length < 2) {
-    clearSearch();
+  if (!term) {
+    clearHighlights();
     return;
   }
-  
-  if (term === lastTerm && highlights.length > 0) {
-    // Simplemente navegar al siguiente resultado
-    navigateSearch(1);
+  const text = viewer.innerText;
+  const regex = new RegExp(term, 'gi');
+  matches = [...text.matchAll(regex)];
+  if (matches.length === 0) {
+    clearHighlights();
     return;
   }
-  
-  // Nuevo término de búsqueda
-  lastTerm = term;
-  clearSearch();
-  
-  // Buscar en el documento actual
-  const content = viewer.innerHTML;
+  highlightTerms(term);
+  currentIndex = 0;
+  scrollToMatch();
+  updateResultsUI();
+}
+
+function clearHighlights() {
+  viewer.querySelectorAll('mark').forEach(el => {
+    const parent = el.parentNode;
+    parent.replaceChild(document.createTextNode(el.textContent), el);
+    parent.normalize();
+  });
+  searchResults.style.display = 'none';
+}
+
+function highlightTerms(term) {
+  clearHighlights();
+  const innerHTML = viewer.innerHTML;
   const regex = new RegExp(`(${term})`, 'gi');
-  
-  // Resaltar coincidencias
-  viewer.innerHTML = content.replace(regex, '<span class="search-highlight">$1</span>');
-  
-  // Recoger todos los elementos resaltados
-  highlights = Array.from(viewer.querySelectorAll('.search-highlight'));
-  
-  if (highlights.length > 0) {
-    searchPanel.style.display = 'flex';
-    navigateSearch(1); // Ir al primer resultado
-  } else {
-    searchPanel.style.display = 'flex';
-    resultCounter.textContent = 'No hay resultados';
+  viewer.innerHTML = innerHTML.replace(regex, '<mark>$1</mark>');
+}
+
+function scrollToMatch() {
+  const marks = viewer.querySelectorAll('mark');
+  if (marks.length && currentIndex >= 0) {
+    marks[currentIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 }
 
-function navigateSearch(direction) {
-  if (highlights.length === 0) return;
-  
-  // Quitar selección anterior si existe
-  if (currentHit >= 0 && currentHit < highlights.length) {
-    highlights[currentHit].classList.remove('current-hit');
-  }
-  
-  // Actualizar posición
-  currentHit = (currentHit + direction + highlights.length) % highlights.length;
-  
-  // Aplicar nueva selección
-  highlights[currentHit].classList.add('current-hit');
-  highlights[currentHit].scrollIntoView({ behavior: 'smooth', block: 'center' });
-  
-  // Actualizar contador
-  resultCounter.textContent = `${currentHit + 1} de ${highlights.length}`;
+function updateResultsUI() {
+  resultCounter.textContent = `${currentIndex + 1} de ${matches.length}`;
+  searchResults.style.display = 'flex';
 }
 
-// === EVENTOS ===
-window.addEventListener('DOMContentLoaded', () => {
-  buildHomeList();
-  showHome();
-
-  // Eventos de vista principal
-  gridBtn.onclick = () => docList.className = 'doc-grid';
-  listBtn.onclick = () => docList.className = 'doc-list';
-
-  // Eventos de zoom
-  btnZoomIn.onclick = () => changeFont(1);
-  btnZoomOut.onclick = () => changeFont(-1);
-
-  // Eventos de navegación
-  btnBack.onclick = goBack;
-  homeBtn.onclick = showHome;
-
-  // Eventos de filtrado de minutas
-  minutasCatFilter.onchange = () => {
-    lastMinutasCategory = minutasCatFilter.value;
-    renderMinutasList();
-  };
-  
-  // Eventos de búsqueda
-  searchInput.addEventListener('input', (e) => {
-    const term = e.target.value.trim();
-    // Retrasar la búsqueda para evitar búsquedas constantes mientras se escribe
-    clearTimeout(searchInput.timeout);
-    searchInput.timeout = setTimeout(() => performSearch(term), 300);
-  });
-  
-  // Navegación entre resultados de búsqueda
-  prevResultBtn.addEventListener('click', () => navigateSearch(-1));
-  nextResultBtn.addEventListener('click', () => navigateSearch(1));
-  closeSearchBtn.addEventListener('click', () => {
-    clearSearch();
-    searchInput.value = '';
-  });
-  
-  // Manejar teclas de acceso rápido
-  document.addEventListener('keydown', (e) => {
-    // Ctrl+F para búsqueda
-    if (e.ctrlKey && e.key === 'f') {
-      e.preventDefault();
-      searchInput.focus();
-    }
-    
-    // Escape para cerrar búsqueda
-    if (e.key === 'Escape' && searchPanel.style.display === 'flex') {
-      clearSearch();
-      searchInput.value = '';
-    }
-    
-    // F3 para siguiente resultado
-    if (e.key === 'F3' || (e.ctrlKey && e.key === 'g')) {
-      e.preventDefault();
-      if (highlights.length > 0) {
-        navigateSearch(e.shiftKey ? -1 : 1);
-      }
-    }
-  });
-  
-  // Restaurar tamaño de fuente preferido
-  const savedSize = localStorage.getItem('preferredFontSize');
-  if (savedSize) {
-    // Eliminar cualquier clase de tamaño existente
-    ['small', 'medium', 'large', 'xlarge'].forEach(size => {
-      document.body.classList.remove('font-size-' + size);
-    });
-    // Aplicar el tamaño guardado
-    document.body.classList.add('font-size-' + savedSize);
-  } else {
-    // Si no hay preferencia, usar medium por defecto
-    document.body.classList.add('font-size-medium');
+prevResult.onclick = () => {
+  if (matches.length) {
+    currentIndex = (currentIndex - 1 + matches.length) % matches.length;
+    scrollToMatch();
+    updateResultsUI();
   }
-  
-  // Detectar si hay soporte para Service Worker
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log('Service Worker registrado'))
-        .catch(err => console.error('Error al registrar Service Worker:', err));
-    });
+};
+
+nextResult.onclick = () => {
+  if (matches.length) {
+    currentIndex = (currentIndex + 1) % matches.length;
+    scrollToMatch();
+    updateResultsUI();
   }
+};
+
+closeSearch.onclick = () => {
+  searchInput.value = '';
+  clearHighlights();
+};
+
+searchInput.addEventListener('input', e => {
+  const term = e.target.value.trim();
+  clearTimeout(searchInput._timeout);
+  searchInput._timeout = setTimeout(() => {
+    if (viewer.style.display === 'block') {
+      performSearch(term);
+    }
+  }, 300);
 });
 
-// Agregar estilos CSS para la búsqueda y el zoom al cargar la página
+// === INICIALIZACIÓN ===
+document.addEventListener('DOMContentLoaded', () => {
+  loadDocs();
+  changeView(true);
+});
+
 (function() {
-  const style = document.createElement('style');
-  style.textContent = `
-    .search-highlight {
-      background-color: #ffeb3b;
-      border-radius: 2px;
-    }
-    .current-hit {
-      background-color: #ff9800;
-      color: #fff;
-    }
-    .loading {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100px;
-      color: #666;
-    }
-    .error-container {
-      text-align: center;
-      padding: 2rem;
-      color: #d32f2f;
-    }
-    .retry-btn {
-      margin-top: 1rem;
-      padding: 0.5rem 1rem;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: var(--radius);
-      cursor: pointer;
-    }
-    
-    /* Estilos mejorados para el zoom */
-    .font-size-small #viewer, .font-size-small #minutas-viewer { font-size: 0.9rem; }
-    .font-size-medium #viewer, .font-size-medium #minutas-viewer { font-size: 1rem; }
-    .font-size-large #viewer, .font-size-large #minutas-viewer { font-size: 1.1rem; }
-    .font-size-xlarge #viewer, .font-size-xlarge #minutas-viewer { font-size: 1.2rem; }
-    
-    /* Asegurarse que el contenido interno también recibe los cambios */
-    .font-size-small #viewer *, .font-size-small #minutas-viewer * { font-size: inherit; }
-    .font-size-medium #viewer *, .font-size-medium #minutas-viewer * { font-size: inherit; }
-    .font-size-large #viewer *, .font-size-large #minutas-viewer * { font-size: inherit; }
-    .font-size-xlarge #viewer *, .font-size-xlarge #minutas-viewer * { font-size: inherit; }
-  `;
-  document.head.appendChild(style);
+  // Scroll zoom buttons hidden inicialmente
+  searchResults.style.display = 'none';
 })();
