@@ -63,7 +63,15 @@
       align-items: center;
       justify-content: center;
     }
-    header.main-search .title-bar h1 { font-size: 1.2rem; }
+    /* Logo next to title */
+    header.main-search .title-bar img.logo {
+      height: 32px;
+      width: auto;
+      margin-right: 0.5rem;
+    }
+    header.main-search .title-bar h1 {
+      font-size: 1.2rem;
+    }
     header.main-search .search-bar {
       margin-top: 0.25rem;
       background: #fff;
@@ -123,9 +131,10 @@
 </head>
 <body>
 
-  <!-- Barra superior más compacta -->
+  <!-- Barra superior más compacta con logo -->
   <header class="main-search">
     <div class="title-bar">
+      <img src="logo-1.png" alt="Logo" class="logo">
       <h1>Biblioteca Jurídica</h1>
     </div>
     <div class="search-bar">
