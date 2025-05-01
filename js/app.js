@@ -27,6 +27,7 @@ const closeSearch = document.getElementById('close-search');
 
 let matches = [];
 let currentIndex = -1;
+let currentActiveContainer = null; // Para rastrear dónde buscar: viewer o minutasViewer
 
 // === ZOOM ESTADO ===
 const zoomLevels = ['small', 'medium', 'large', 'xlarge'];
@@ -101,6 +102,7 @@ const docsMinutas = [
 // === FUNCIÓN DE LIMPIEZA ===
 function clearView() {
   viewer.innerHTML = '';
+  minutasViewer.innerHTML = '';
   clearHighlights();
   matches = [];
   currentIndex = -1;
@@ -112,9 +114,12 @@ function clearView() {
 function showHome() {
   minutasView.style.display = 'none';
   viewer.style.display = 'none';
+  minutasViewer.style.display = 'none';
   docToolbar.classList.add('hidden');
   homeView.style.display = 'flex';
+  clearView();
   loadDocs();
+  currentActiveContainer = null;
 }
 
 function showMinutas() {
@@ -122,32 +127,61 @@ function showMinutas() {
   viewer.style.display = 'none';
   docToolbar.classList.add('hidden');
   minutasView.style.display = 'flex';
+  minutasViewer.style.display = 'none';
+  minutasDocList.style.display = 'grid';
+  clearView();
   loadMinutas();
+  currentActiveContainer = null;
 }
 
 // === ABRIR DOCUMENTO ===
 function openDoc(path, title) {
-  homeView.style.display = 'none';
-  minutasView.style.display = 'none';
-  docToolbar.classList.remove('hidden');
-  viewer.style.display = 'block';
   clearView();
+  
+  // Configurar la vista según el tipo de documento
+  if (path.startsWith('minutas/')) {
+    // Es una minuta - usar la vista de minutas
+    homeView.style.display = 'none';
+    viewer.style.display = 'none';
+    docToolbar.classList.remove('hidden');
+    minutasView.style.display = 'flex';
+    minutasDocList.style.display = 'none';
+    minutasViewer.style.display = 'block';
+    currentActiveContainer = minutasViewer;
+  } else {
+    // Es un documento normal - usar la vista principal
+    homeView.style.display = 'none';
+    minutasView.style.display = 'none';
+    docToolbar.classList.remove('hidden');
+    viewer.style.display = 'block';
+    currentActiveContainer = viewer;
+  }
 
   console.log('Fetching document:', path);
   fetch(path)
     .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.text(); })
     .then(content => {
+      const targetContainer = currentActiveContainer;
+      
       if (path.endsWith('.html')) {
-        viewer.innerHTML = content;
+        targetContainer.innerHTML = content;
       } else {
-        // marcado con marked.parse para compatibilidad
-        viewer.innerHTML = marked.parse(content);
+        // Marcado con marked.parse para compatibilidad
+        targetContainer.innerHTML = marked.parse(content);
       }
       document.title = `${title} – Biblioteca Jurídica`;
+      
+      // Activar highlight.js si está disponible
+      if (window.hljs) {
+        document.querySelectorAll('pre code').forEach((block) => {
+          hljs.highlightBlock(block);
+        });
+      }
     })
     .catch(err => {
       console.error('Error loading document:', err);
-      viewer.innerHTML = `<div class="error-container">
+      const targetContainer = currentActiveContainer;
+      targetContainer.innerHTML = `<div class="error-container">
         <p>Error al cargar el documento (${err.message}).</p>
         <button class="retry-btn" onclick="openDoc('${path}', '${title}')">Reintentar</button>
       </div>`;
@@ -156,11 +190,10 @@ function openDoc(path, title) {
 
 // === CARGAR TARJETAS ===
 function loadDocs() {
-  // Implementar lógica para cargar documentos
   docList.innerHTML = '';
   docs.forEach(doc => {
     const card = document.createElement('div');
-    card.className = 'doc-card';
+    card.className = 'doc-item'; // Usar la clase correcta según el HTML
     
     if (doc.file === 'minutas') {
       // Es el botón de minutas
@@ -191,10 +224,10 @@ function loadMinutas() {
     .filter(doc => selectedCategory === 'all' || doc.category === selectedCategory)
     .forEach(doc => {
       const card = document.createElement('div');
-      card.className = 'minuta-card';
+      card.className = 'doc-item'; // Usar la misma clase que los documentos principales
       card.innerHTML = `
-        <div class="minuta-title">${doc.title}</div>
-        <div class="minuta-category">${doc.category}</div>
+        <div class="doc-title">${doc.title}</div>
+        <div class="doc-category">${doc.category}</div>
       `;
       card.addEventListener('click', () => openDoc(doc.path, doc.title));
       minutasDocList.appendChild(card);
@@ -223,7 +256,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // === BÚSQUEDA EN DOCUMENTO ===
 function clearHighlights() {
   // Eliminar todas las marcas de resaltado anteriores
-  const highlights = viewer.querySelectorAll('mark');
+  if (!currentActiveContainer) return;
+  
+  const highlights = currentActiveContainer.querySelectorAll('mark');
   highlights.forEach(highlight => {
     const parent = highlight.parentNode;
     if (parent) {
@@ -243,16 +278,15 @@ function performSearch(term) {
   matches = [];
   currentIndex = -1;
   
-  if (!term) return;
+  if (!term || !currentActiveContainer) return;
   
   // Crear una estructura para almacenar coincidencias y sus posiciones
-  const content = viewer.innerHTML;
-  const textContent = viewer.textContent || viewer.innerText;
+  const textContent = currentActiveContainer.textContent || currentActiveContainer.innerText;
   const regex = new RegExp(term, 'gi');
   
   // Construir un array de nodos de texto
   const textNodes = [];
-  const walk = document.createTreeWalker(viewer, NodeFilter.SHOW_TEXT, null, false);
+  const walk = document.createTreeWalker(currentActiveContainer, NodeFilter.SHOW_TEXT, null, false);
   let node;
   while (node = walk.nextNode()) {
     textNodes.push(node);
@@ -262,6 +296,9 @@ function performSearch(term) {
   textNodes.forEach(textNode => {
     const nodeText = textNode.nodeValue;
     let match;
+    
+    // Reiniciar lastIndex para cada nodo
+    regex.lastIndex = 0;
     
     while ((match = regex.exec(nodeText)) !== null) {
       matches.push({
@@ -273,7 +310,10 @@ function performSearch(term) {
     }
   });
   
-  if (matches.length === 0) return;
+  if (matches.length === 0) {
+    updateResultsUI();
+    return;
+  }
   
   // Resaltar todas las coincidencias
   // Necesitamos procesar desde el final para que los índices no cambien al modificar el DOM
@@ -294,10 +334,10 @@ function performSearch(term) {
 }
 
 function scrollToMatch() {
-  if (matches.length === 0 || currentIndex < 0) return;
+  if (matches.length === 0 || currentIndex < 0 || !currentActiveContainer) return;
   
   // Obtener todos los elementos mark para encontrar el correcto
-  const highlights = viewer.querySelectorAll('mark');
+  const highlights = currentActiveContainer.querySelectorAll('mark');
   if (currentIndex < highlights.length) {
     const targetElement = highlights[currentIndex];
     targetElement.scrollIntoView({
@@ -314,13 +354,11 @@ function scrollToMatch() {
 function updateResultsUI() {
   if (matches.length > 0) {
     resultCounter.textContent = `${currentIndex + 1} de ${matches.length}`;
-    // solo en vista de documento
-    if (viewer.style.display === 'block') {
-      searchResults.style.display = 'flex';
-    }
+    // Mostrar los controles de navegación
+    searchResults.style.display = 'flex';
   } else {
     resultCounter.textContent = 'No hay resultados';
-    if (searchInput.value.trim()) {
+    if (searchInput.value.trim() && currentActiveContainer) {
       searchResults.style.display = 'flex';
     } else {
       searchResults.style.display = 'none';
@@ -353,8 +391,40 @@ closeSearch.addEventListener('click', () => {
 searchInput.addEventListener('input', e => { 
   clearTimeout(searchInput._timeout); 
   searchInput._timeout = setTimeout(() => { 
-    if (viewer.style.display === 'block') {
+    // Solo buscar si hay un contenedor activo donde buscar
+    if (currentActiveContainer) {
       performSearch(e.target.value.trim());
     }
   }, 300); 
+});
+
+/* Agregar un estilo CSS para la marca actual */
+document.addEventListener('DOMContentLoaded', () => {
+  const style = document.createElement('style');
+  style.innerHTML = `
+    mark { background-color: #ffeb3b; }
+    mark.current-match { background-color: #ffa000; }
+    
+    /* Estilo para los resultados de búsqueda */
+    .search-results {
+      display: none;
+    }
+    
+    /* Estilo para contenedor de error */
+    .error-container {
+      padding: 2rem;
+      text-align: center;
+      color: #d32f2f;
+    }
+    .retry-btn {
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      background: #1f334d;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  `;
+  document.head.appendChild(style);
 });
