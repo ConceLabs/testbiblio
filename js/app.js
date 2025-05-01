@@ -30,13 +30,21 @@ let currentIndex = -1;
 
 // === ZOOM ESTADO ===
 const zoomLevels = ['small', 'medium', 'large', 'xlarge'];
-let currentZoom = 1; // medium
+let currentZoom = 1; // start at 'medium'
 function applyZoom() {
-  document.body.classList.remove(...zoomLevels.map(l => `font-size-${l}`));
+  document.body.classList.remove(
+    ...zoomLevels.map(l => `font-size-${l}`)
+  );
   document.body.classList.add(`font-size-${zoomLevels[currentZoom]}`);
 }
-btnZoomIn.addEventListener('click', () => { if (currentZoom < zoomLevels.length - 1) currentZoom++; applyZoom(); });
-btnZoomOut.addEventListener('click', () => { if (currentZoom > 0) currentZoom--; applyZoom(); });
+btnZoomIn.addEventListener('click', () => {
+  if (currentZoom < zoomLevels.length-1) currentZoom++;
+  applyZoom();
+});
+btnZoomOut.addEventListener('click', () => {
+  if (currentZoom > 0) currentZoom--;
+  applyZoom();
+});
 
 // === DATOS DE DOCUMENTOS ===
 const docs = [
@@ -55,7 +63,7 @@ const docs = [
 ];
 
 // === DOCUMENTOS MINUTAS ===
-const docsMinutas = [
+const docsMinutas = [ 
   { path: 'minutas/2_CONTROL_DE_IDENTIDAD-LEY_DE_TRANSITO_C.md', title: 'N° 2 CONTROL DE IDENTIDAD - LEY DE TRÁNSITO', category: 'Control de Identidad' },
   { path: 'minutas/3_ACCESO_A_INFORMACION_EN_FACEBOOK.md', title: 'N° 3 ACCESO A INFORMACIÓN EN FACEBOOK', category: 'Diligencias e Investigación' },
   { path: 'minutas/4_PRUEBA_POSTERIOR_AL_CIERRE.md', title: 'N° 4 PRUEBA POSTERIOR AL CIERRE', category: 'Procedimiento y Garantías' },
@@ -79,9 +87,9 @@ const docsMinutas = [
   { path: 'minutas/22_CONTROL_IDENTIDAD_Y_HUIDA.md', title: 'N° 22 CONTROL IDENTIDAD Y HUIDA', category: 'Control de Identidad' },
   { path: 'minutas/23_CONTROL_IDENTIDAD_Y_CAN_DETECTOR_DE_DROGAS.md', title: 'N° 23 CONTROL IDENTIDAD Y CAN DETECTOR DE DROGAS', category: 'Control de Identidad' },
   { path: 'minutas/24_Reclamos_por_infracción_de_garantías_de_terceros.md', title: 'N° 24 RECLAMOS POR INFRACCIÓN DE GARANTÍAS DE TERCEROS', category: 'Procedimiento y Garantías' },
-  { path: 'minutas/25_Porte_o_tenencia_de_una_munición.md', title: 'N°
   { path: 'minutas/25_Porte_o_tenencia_de_una_munición.md', title: 'N° 25 PORTE O TENENCIA DE UNA MUNICIÓN', category: 'Delitos y Tipicidad' },
   { path: 'minutas/26_Delito_continuado_-_reiterado.md', title: 'N° 26 DELITO CONTINUADO - REITERADO', category: 'Delitos y Tipicidad' },
+  // Eliminado el documento duplicado: N° 26-DELITO CONTINUADO - REITERADO
   { path: 'minutas/27_Control_viapublica.md', title: 'N° 27 CONTROL DE IDENTIDAD - TRANSACCIÓN EN LA VÍA PÚBLICA', category: 'Control de Identidad' },
   { path: 'minutas/28_Obligatoriedad_del_artículo_302_del_CPP_durante_la_etapa_investigativa.md', title: 'N° 28 OBLIGATORIEDAD DEL ARTÍCULO 302 DEL CPP DURANTE LA ETAPA INVESTIGATIVA', category: 'Procedimiento y Garantías' },
   { path: 'minutas/29_Abuso_sexual_-_Introducción_de_dedos.md', title: 'N° 29 ABUSO SEXUAL - INTRODUCCIÓN DE DEDOS', category: 'Delitos y Tipicidad' },
@@ -148,25 +156,47 @@ function openDoc(path, title) {
 
 // === CARGAR TARJETAS ===
 function loadDocs() {
+  // Implementar lógica para cargar documentos
   docList.innerHTML = '';
   docs.forEach(doc => {
     const card = document.createElement('div');
-    card.className = 'doc-item';
-    card.innerHTML = `<div class="doc-icon"><i class="${doc.icon}"></i></div><div class="doc-title">${doc.title}</div>`;
-    card.onclick = () => doc.file === 'minutas' ? showMinutas() : openDoc(doc.file, doc.title);
+    card.className = 'doc-card';
+    
+    if (doc.file === 'minutas') {
+      // Es el botón de minutas
+      card.innerHTML = `
+        <div class="doc-icon"><i class="${doc.icon}"></i></div>
+        <div class="doc-title">${doc.title}</div>
+      `;
+      card.addEventListener('click', showMinutas);
+    } else {
+      // Es un documento normal
+      card.innerHTML = `
+        <div class="doc-icon"><i class="${doc.icon}"></i></div>
+        <div class="doc-title">${doc.title}</div>
+      `;
+      card.addEventListener('click', () => openDoc(doc.file, doc.title));
+    }
+    
     docList.appendChild(card);
   });
 }
 
 function loadMinutas() {
+  // Implementar lógica para cargar minutas según filtro
+  const selectedCategory = minutasCatFilter.value;
+  
   minutasDocList.innerHTML = '';
   docsMinutas
-    .filter(d => minutasCatFilter.value === 'all' || d.category === minutasCatFilter.value)
+    .filter(doc => selectedCategory === 'all' || doc.category === selectedCategory)
     .forEach(doc => {
       const card = document.createElement('div');
-      card.className = 'doc-item';
-      card.innerHTML = `<div class="doc-title">${doc.title}</div><div class="doc-category">${doc.category}</div>`;
-      card.onclick = () => openDoc(doc.path, doc.title);
+      card.className = 'minuta-card';
+      card.innerHTML = `
+        <div class="minuta-title">${doc.title}</div>
+        <div class="minuta-category">${doc.category}</div>
+      `;
+      card.addEventListener('click', () => openDoc(doc.path, doc.title));
       minutasDocList.appendChild(card);
     });
 }
@@ -187,4 +217,144 @@ minutasCatFilter.addEventListener('change', loadMinutas);
 document.addEventListener('DOMContentLoaded', () => {
   loadDocs();
   changeView(true);
+  applyZoom(); // inicial zoom
+});
+
+// === BÚSQUEDA EN DOCUMENTO ===
+function clearHighlights() {
+  // Eliminar todas las marcas de resaltado anteriores
+  const highlights = viewer.querySelectorAll('mark');
+  highlights.forEach(highlight => {
+    const parent = highlight.parentNode;
+    if (parent) {
+      // Reemplazar el elemento mark por su contenido de texto
+      parent.replaceChild(
+        document.createTextNode(highlight.textContent || ''),
+        highlight
+      );
+      // Normalizar para fusionar nodos de texto adyacentes
+      parent.normalize();
+    }
+  });
+}
+
+function performSearch(term) {
+  clearHighlights();
+  matches = [];
+  currentIndex = -1;
+  
+  if (!term) return;
+  
+  // Crear una estructura para almacenar coincidencias y sus posiciones
+  const content = viewer.innerHTML;
+  const textContent = viewer.textContent || viewer.innerText;
+  const regex = new RegExp(term, 'gi');
+  
+  // Construir un array de nodos de texto
+  const textNodes = [];
+  const walk = document.createTreeWalker(viewer, NodeFilter.SHOW_TEXT, null, false);
+  let node;
+  while (node = walk.nextNode()) {
+    textNodes.push(node);
+  }
+  
+  // Buscar coincidencias en cada nodo de texto
+  textNodes.forEach(textNode => {
+    const nodeText = textNode.nodeValue;
+    let match;
+    
+    while ((match = regex.exec(nodeText)) !== null) {
+      matches.push({
+        node: textNode,
+        startOffset: match.index,
+        endOffset: match.index + match[0].length,
+        text: match[0]
+      });
+    }
+  });
+  
+  if (matches.length === 0) return;
+  
+  // Resaltar todas las coincidencias
+  // Necesitamos procesar desde el final para que los índices no cambien al modificar el DOM
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const match = matches[i];
+    const range = document.createRange();
+    range.setStart(match.node, match.startOffset);
+    range.setEnd(match.node, match.endOffset);
+    
+    const highlightEl = document.createElement('mark');
+    range.surroundContents(highlightEl);
+  }
+  
+  // Mostrar la primera coincidencia
+  currentIndex = 0;
+  scrollToMatch();
+  updateResultsUI();
+}
+
+function scrollToMatch() {
+  if (matches.length === 0 || currentIndex < 0) return;
+  
+  // Obtener todos los elementos mark para encontrar el correcto
+  const highlights = viewer.querySelectorAll('mark');
+  if (currentIndex < highlights.length) {
+    const targetElement = highlights[currentIndex];
+    targetElement.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
+    });
+    
+    // Resaltar la coincidencia actual con una clase especial
+    highlights.forEach(h => h.classList.remove('current-match'));
+    targetElement.classList.add('current-match');
+  }
+}
+
+function updateResultsUI() {
+  if (matches.length > 0) {
+    resultCounter.textContent = `${currentIndex + 1} de ${matches.length}`;
+    // solo en vista de documento
+    if (viewer.style.display === 'block') {
+      searchResults.style.display = 'flex';
+    }
+  } else {
+    resultCounter.textContent = 'No hay resultados';
+    if (searchInput.value.trim()) {
+      searchResults.style.display = 'flex';
+    } else {
+      searchResults.style.display = 'none';
+    }
+  }
+}
+
+prevResult.addEventListener('click', () => {
+  if (matches.length === 0) return;
+  
+  currentIndex = (currentIndex - 1 + matches.length) % matches.length;
+  scrollToMatch();
+  updateResultsUI();
+});
+
+nextResult.addEventListener('click', () => {
+  if (matches.length === 0) return;
+  
+  currentIndex = (currentIndex + 1) % matches.length;
+  scrollToMatch();
+  updateResultsUI();
+});
+
+closeSearch.addEventListener('click', () => { 
+  searchInput.value = ''; 
+  clearHighlights(); 
+  searchResults.style.display = 'none'; 
+});
+
+searchInput.addEventListener('input', e => { 
+  clearTimeout(searchInput._timeout); 
+  searchInput._timeout = setTimeout(() => { 
+    if (viewer.style.display === 'block') {
+      performSearch(e.target.value.trim());
+    }
+  }, 300); 
 });
