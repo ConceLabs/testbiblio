@@ -17,6 +17,7 @@ const minutasCatFilter = document.getElementById('minutas-catFilter');
 const minutasDocList = document.getElementById('minutas-docList');
 const minutasViewer = document.getElementById('minutas-viewer');
 
+// === BÚSQUEDA ===
 const searchInput = document.getElementById('search');
 const searchResults = document.getElementById('search-results');
 const prevResult = document.getElementById('prev-result');
@@ -24,39 +25,24 @@ const nextResult = document.getElementById('next-result');
 const resultCounter = document.getElementById('result-counter');
 const closeSearch = document.getElementById('close-search');
 
-let currentDocs = [];
-let currentIndex = -1;
 let matches = [];
+let currentIndex = -1;
 
 // === DATOS DE DOCUMENTOS ===
 const docs = [
   { file: 'docs/documento2.html', title: 'CÓDIGO PROCESAL PENAL', icon: 'fa-solid fa-scale-balanced' },
-      { file: 'docs/documento3.html', title: 'LEY DE DROGAS', icon: 'fa-solid fa-pills' },
-      { file: 'docs/documento4.html', title: 'LEY DE CONTROL DE ARMAS', icon: 'fa-solid fa-gun' },
-      { file: 'docs/documento5.html', title: 'LEY DE PENAS SUSTITUTIVAS', icon: 'fa-solid fa-person-walking-arrow-right' },
-      { file: 'docs/documento6.html', title: 'LEY DE VIOLENCIA INTRAFAMILIAR', icon: 'fa-solid fa-house-user' },
-      { file: 'docs/documento7.html', title: 'LEY RPA', icon: 'fa-solid fa-child' },
-      { file: 'docs/documento8.html', title: 'LEY RPA (Diferida)', icon: 'fa-solid fa-child-reaching' },
-      { file: 'docs/documento9.html', title: 'LEY DE VIOLENCIA EN LOS ESTADIOS', icon: 'fa-solid fa-futbol' },
-      { file: 'docs/documento10.html', title: 'LEY DE TRANSITO', icon: 'fa-solid fa-car' },
-      { file: 'docs/documento11.html', title: 'LEY ORGANICA DEL MINISTERIO PUBLICO', icon: 'fa-solid fa-building-columns' },
+  { file: 'docs/documento3.html', title: 'LEY DE DROGAS', icon: 'fa-solid fa-pills' },
+  { file: 'docs/documento4.html', title: 'LEY DE CONTROL DE ARMAS', icon: 'fa-solid fa-gun' },
+  { file: 'docs/documento5.html', title: 'LEY DE PENAS SUSTITUTIVAS', icon: 'fa-solid fa-person-walking-arrow-right' },
+  { file: 'docs/documento6.html', title: 'LEY DE VIOLENCIA INTRAFAMILIAR', icon: 'fa-solid fa-house-user' },
+  { file: 'docs/documento7.html', title: 'LEY RPA', icon: 'fa-solid fa-child' },
+  { file: 'docs/documento8.html', title: 'LEY RPA (Diferida)', icon: 'fa-solid fa-child-reaching' },
+  { file: 'docs/documento9.html', title: 'LEY DE VIOLENCIA EN LOS ESTADIOS', icon: 'fa-solid fa-futbol' },
+  { file: 'docs/documento10.html', title: 'LEY DE TRANSITO', icon: 'fa-solid fa-car' },
+  { file: 'docs/documento11.html', title: 'LEY ORGANICA DEL MINISTERIO PUBLICO', icon: 'fa-solid fa-building-columns' },
   { file: 'docs/calculadora_abonos.html', title: 'Calculadora Abonos por Arresto', icon: 'fa-solid fa-calculator' },
   { file: 'minutas', title: 'Minutas Jurisprudencia', icon: 'fa-solid fa-book-bookmark' }
 ];
-
-function buildHomeList() {
-  docList.innerHTML = '';
-  docs.forEach(doc => {
-    const card = document.createElement('div');
-    card.className = 'doc-item';
-    card.innerHTML = `<div class="doc-icon"><i class="${doc.icon}"></i></div><div class="doc-title">${doc.title}</div>`;
-    card.onclick = () => {
-      if (doc.file === 'minutas') showMinutas();
-      else openDoc(doc.file, doc.title);
-    };
-    docList.appendChild(card);
-  });
-}
 
 // === DOCUMENTOS MINUTAS ===
 const docsMinutas = [
@@ -85,7 +71,6 @@ const docsMinutas = [
   { path: 'minutas/24_Reclamos_por_infracción_de_garantías_de_terceros.md', title: 'N° 24 RECLAMOS POR INFRACCIÓN DE GARANTÍAS DE TERCEROS', category: 'Procedimiento y Garantías' },
   { path: 'minutas/25_Porte_o_tenencia_de_una_munición.md', title: 'N° 25 PORTE O TENENCIA DE UNA MUNICIÓN', category: 'Delitos y Tipicidad' },
   { path: 'minutas/26_Delito_continuado_-_reiterado.md', title: 'N° 26 DELITO CONTINUADO - REITERADO', category: 'Delitos y Tipicidad' },
-  // Eliminado el documento duplicado: N° 26-DELITO CONTINUADO - REITERADO
   { path: 'minutas/27_Control_viapublica.md', title: 'N° 27 CONTROL DE IDENTIDAD - TRANSACCIÓN EN LA VÍA PÚBLICA', category: 'Control de Identidad' },
   { path: 'minutas/28_Obligatoriedad_del_artículo_302_del_CPP_durante_la_etapa_investigativa.md', title: 'N° 28 OBLIGATORIEDAD DEL ARTÍCULO 302 DEL CPP DURANTE LA ETAPA INVESTIGATIVA', category: 'Procedimiento y Garantías' },
   { path: 'minutas/29_Abuso_sexual_-_Introducción_de_dedos.md', title: 'N° 29 ABUSO SEXUAL - INTRODUCCIÓN DE DEDOS', category: 'Delitos y Tipicidad' },
@@ -94,16 +79,17 @@ const docsMinutas = [
   { path: 'minutas/32_INSTRUCCION_SOBRE_PRIMERAS_DILIGENCIAS.md', title: 'N° 32 INSTRUCCIÓN SOBRE PRIMERAS DILIGENCIAS', category: 'Diligencias e Investigación' }
 ];
 
-// === FUNCIONES DE UTILIDAD ===
+// === FUNCIÓN DE LIMPIEZA ===
 function clearView() {
   viewer.innerHTML = '';
+  clearHighlights();
   matches = [];
   currentIndex = -1;
-  searchResults.style.display = 'none';
 }
 
+// === MOSTRAR VISTAS ===
 function showHome() {
-  minutasView.style.display = 'none';
+  minutasView.style.display =                  'none';
   viewer.style.display = 'none';
   docToolbar.classList.add('hidden');
   homeView.style.display = 'flex';
@@ -118,34 +104,47 @@ function showMinutas() {
   loadMinutas();
 }
 
-function openDoc(file, title) {
+// === ABRIR DOCUMENTO ===
+function openDoc(path, title) {
   homeView.style.display = 'none';
   minutasView.style.display = 'none';
   docToolbar.classList.remove('hidden');
   viewer.style.display = 'block';
   clearView();
-  marked.setOptions({ highlight: code => hljs.highlightAuto(code).value });
-  fetch(`docs/${file}`)
-    .then(res => res.text())
-    .then(md => {
-      viewer.innerHTML = marked(md);
+
+  // Fetch directo de HTML o MD según extensión
+  console.log('Fetching document:', path);
+  fetch(path)
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.text();
+    })
+    .then(content => {
+      if (path.endsWith('.html')) {
+        viewer.innerHTML = content;
+      } else {
+        marked.setOptions({ highlight: code => hljs.highlightAuto(code).value });
+        viewer.innerHTML = marked(content);
+      }
       document.title = `${title} – Biblioteca Jurídica`;
     })
     .catch(err => {
+      console.error('Error loading document:', err);
       viewer.innerHTML = `<div class="error-container">
-        <p>Error al cargar el documento.</p>
-        <button class="retry-btn" onclick="openDoc('${file}', '${title}')">Reintentar</button>
+        <p>Error al cargar el documento (${err.message}).</p>
+        <button class="retry-btn" onclick="openDoc('${path}', '${title}')">Reintentar</button>
       </div>`;
     });
 }
 
+// === CARGAR TARJETAS ===
 function loadDocs() {
   docList.innerHTML = '';
   docs.forEach(doc => {
     const card = document.createElement('div');
     card.className = 'doc-item';
     card.innerHTML = `<div class="doc-icon"><i class="${doc.icon}"></i></div><div class="doc-title">${doc.title}</div>`;
-    card.onclick = () => openDoc(doc.file, doc.title);
+    card.onclick = () => doc.file === 'minutas' ? showMinutas() : openDoc(doc.file, doc.title);
     docList.appendChild(card);
   });
 }
@@ -163,60 +162,55 @@ function loadMinutas() {
     });
 }
 
+// === CAMBIO DE VISTA ===
 function changeView(isGrid) {
   docList.className = isGrid ? 'doc-grid' : 'doc-list';
   gridBtn.classList.toggle('active', isGrid);
   listBtn.classList.toggle('active', !isGrid);
 }
 
-gridBtn.onclick = () => changeView(true);
-listBtn.onclick = () => changeView(false);
-btnBack.onclick = showHome;
-homeBtn.onclick = showHome;
-minutasCatFilter.onchange = loadMinutas;
-btnZoomIn.onclick = () => document.body.classList.toggle('font-size-large', true);
-btnZoomOut.onclick = () => document.body.classList.toggle('font-size-small', true);
+gridBtn.addEventListener('click', () => changeView(true));
+listBtn.addEventListener('click', () => changeView(false));
+btnBack.addEventListener('click', showHome);
+homeBtn.addEventListener('click', showHome);
+minutasCatFilter.addEventListener('change', loadMinutas);
+btnZoomIn.addEventListener('click', () => document.body.classList.toggle('font-size-large', true));
+btnZoomOut.addEventListener('click', () => document.body.classList.toggle('font-size-small', true));
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadDocs();
+  changeView(true);
+});
 
 // === BÚSQUEDA EN DOCUMENTO ===
-function performSearch(term) {
-  if (!term) {
-    clearHighlights();
-    return;
-  }
-  const text = viewer.innerText;
-  const regex = new RegExp(term, 'gi');
-  matches = [...text.matchAll(regex)];
-  if (matches.length === 0) {
-    clearHighlights();
-    return;
-  }
-  highlightTerms(term);
-  currentIndex = 0;
-  scrollToMatch();
-  updateResultsUI();
-}
-
 function clearHighlights() {
   viewer.querySelectorAll('mark').forEach(el => {
     const parent = el.parentNode;
     parent.replaceChild(document.createTextNode(el.textContent), el);
     parent.normalize();
   });
-  searchResults.style.display = 'none';
 }
 
-function highlightTerms(term) {
+function performSearch(term) {
   clearHighlights();
-  const innerHTML = viewer.innerHTML;
-  const regex = new RegExp(`(${term})`, 'gi');
-  viewer.innerHTML = innerHTML.replace(regex, '<mark>$1</mark>');
+  matches = [];
+  currentIndex = -1;
+  if (!term) return;
+  const text = viewer.innerText;
+  const regex = new RegExp(term, 'gi');
+  matches = [...text.matchAll(regex)];
+  if (!matches.length) return;
+  const html = viewer.innerHTML.replace(regex, '<mark>$&</mark>');
+  viewer.innerHTML = html;
+  currentIndex = 0;
+  scrollToMatch();
+  updateResultsUI();
 }
 
 function scrollToMatch() {
   const marks = viewer.querySelectorAll('mark');
-  if (marks.length && currentIndex >= 0) {
-    marks[currentIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
+  if (!marks.length) return;
+  marks[currentIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function updateResultsUI() {
@@ -224,44 +218,27 @@ function updateResultsUI() {
   searchResults.style.display = 'flex';
 }
 
-prevResult.onclick = () => {
-  if (matches.length) {
-    currentIndex = (currentIndex - 1 + matches.length) % matches.length;
-    scrollToMatch();
-    updateResultsUI();
-  }
-};
+prevResult.addEventListener('click', () => {
+  if (!matches.length) return;
+  currentIndex = (currentIndex - 1 + matches.length) % matches.length;
+  scrollToMatch(); updateResultsUI();
+});
 
-nextResult.onclick = () => {
-  if (matches.length) {
-    currentIndex = (currentIndex + 1) % matches.length;
-    scrollToMatch();
-    updateResultsUI();
-  }
-};
+nextResult.addEventListener('click', () => {
+  if (!matches.length) return;
+  currentIndex = (currentIndex + 1) % matches.length;
+  scrollToMatch(); updateResultsUI();
+});
 
-closeSearch.onclick = () => {
+closeSearch.addEventListener('click', () => {
   searchInput.value = '';
   clearHighlights();
-};
+  searchResults.style.display = 'none';
+});
 
 searchInput.addEventListener('input', e => {
-  const term = e.target.value.trim();
   clearTimeout(searchInput._timeout);
   searchInput._timeout = setTimeout(() => {
-    if (viewer.style.display === 'block') {
-      performSearch(term);
-    }
+    if (viewer.style.display === 'block') performSearch(e.target.value.trim());
   }, 300);
 });
-
-// === INICIALIZACIÓN ===
-document.addEventListener('DOMContentLoaded', () => {
-  loadDocs();
-  changeView(true);
-});
-
-(function() {
-  // Scroll zoom buttons hidden inicialmente
-  searchResults.style.display = 'none';
-})();
