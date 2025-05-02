@@ -37,7 +37,7 @@ function applyZoom() {
   if (currentActiveContainer) {
     currentActiveContainer.style.fontSize = zoomSteps[currentZoom];
   }
-
+}
 btnZoomIn.addEventListener('click', () => {
   if (currentZoom < zoomLevels.length-1) currentZoom++;
   applyZoom();
@@ -248,12 +248,38 @@ homeBtn.addEventListener('click', showHome);
 minutasCatFilter.addEventListener('change', loadMinutas);
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Mover controles de búsqueda fuera de #home-view
+  // 1) Inyectar estilos de resaltado y búsqueda
+  const style = document.createElement('style');
+  style.innerHTML = `
+    mark { background-color: #ffeb3b; }
+    mark.current-match { background-color: #ffa000; }
+    .search-results {
+      display: none;
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999;
+    }
+    .retry-btn {
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      background: #1f334d;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  `;
+  document.head.appendChild(style);
+
+  // 2) Mover el panel de navegación de búsqueda fuera de #home-view
   document.body.appendChild(searchResults);
 
+  // 3) Iniciar la aplicación
   loadDocs();
   changeView(true);
-  applyZoom(); // inicial zoom
+  applyZoom();  // zoom inicial
 });
 
 // === BÚSQUEDA EN DOCUMENTO ===
@@ -402,11 +428,3 @@ searchInput.addEventListener('input', e => {
 });
 
 /* Agregar un estilo CSS para la marca actual */
-document.addEventListener('DOMContentLoaded', () => {
-  // Mover controles de búsqueda fuera de #home-view
-  document.body.appendChild(searchResults);
-
-  loadDocs();
-  changeView(true);
-  applyZoom(); // inicial zoom
-});
