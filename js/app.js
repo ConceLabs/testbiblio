@@ -49,7 +49,7 @@ btnZoomOut.addEventListener('click', () => {
 
 // === DATOS DE DOCUMENTOS ===
 const docs = [
-  { file: 'documento1.md', title: 'CÓDIGO PENAL', icon: 'fa-solid fa-gavel' },
+  { file: 'docs/documento1.md', title: 'CÓDIGO PENAL', icon: 'fa-solid fa-gavel' },
   { file: 'docs/documento2.html', title: 'CÓDIGO PROCESAL PENAL', icon: 'fa-solid fa-scale-balanced' },
   { file: 'docs/documento3.html', title: 'LEY DE DROGAS', icon: 'fa-solid fa-pills' },
   { file: 'docs/documento4.html', title: 'LEY DE CONTROL DE ARMAS', icon: 'fa-solid fa-gun' },
