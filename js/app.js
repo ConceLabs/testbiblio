@@ -31,10 +31,15 @@ let currentActiveContainer = null; // Para rastrear dónde buscar: viewer o minu
 
 // === ZOOM ESTADO ===
 const zoomLevels = ['small', 'medium', 'large', 'xlarge'];
+const zoomSteps = ['0.9rem', '1rem', '1.1rem', '1.2rem'];
 let currentZoom = 1; // start at 'medium'
 function applyZoom() {
-  document.body.classList.remove(
-    ...zoomLevels.map(l => `font-size-${l}`)
+  if (currentActiveContainer) {
+    currentActiveContainer.style.fontSize = zoomSteps[currentZoom];
+  }
+}
+
+`)
   );
   document.body.classList.add(`font-size-${zoomLevels[currentZoom]}`);
 }
@@ -248,6 +253,9 @@ homeBtn.addEventListener('click', showHome);
 minutasCatFilter.addEventListener('change', loadMinutas);
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Mover controles de búsqueda fuera de #home-view
+  document.body.appendChild(searchResults);
+
   loadDocs();
   changeView(true);
   applyZoom(); // inicial zoom
@@ -400,31 +408,10 @@ searchInput.addEventListener('input', e => {
 
 /* Agregar un estilo CSS para la marca actual */
 document.addEventListener('DOMContentLoaded', () => {
-  const style = document.createElement('style');
-  style.innerHTML = `
-    mark { background-color: #ffeb3b; }
-    mark.current-match { background-color: #ffa000; }
-    
-    /* Estilo para los resultados de búsqueda */
-    .search-results {
-      display: none;
-    }
-    
-    /* Estilo para contenedor de error */
-    .error-container {
-      padding: 2rem;
-      text-align: center;
-      color: #d32f2f;
-    }
-    .retry-btn {
-      margin-top: 1rem;
-      padding: 0.5rem 1rem;
-      background: #1f334d;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-  `;
-  document.head.appendChild(style);
+  // Mover controles de búsqueda fuera de #home-view
+  document.body.appendChild(searchResults);
+
+  loadDocs();
+  changeView(true);
+  applyZoom(); // inicial zoom
 });
