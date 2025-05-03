@@ -114,7 +114,10 @@ function loadDocs() {
     const card = document.createElement('div');
     card.className = 'doc-item';
     card.innerHTML = `<div class="doc-icon"><i class="${doc.icon}"></i></div><div class="doc-title">${doc.title}</div>`;
-    card.addEventListener('click', () => openDoc(doc.file, doc.title));
+    card.addEventListener('click', (e) => {
+  e.preventDefault(); // 🚨 ESTO IMPIDE LA RECARGA
+  openDoc(doc.file, doc.title);
+});
     docList.appendChild(card);
   });
 }
