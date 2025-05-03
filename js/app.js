@@ -14,6 +14,7 @@ const viewer = document.getElementById('viewer');
 
 const minutasView = document.getElementById('minutas-view');
 const homeBtn = document.getElementById('home-btn');
+homeBtn.addEventListener('click', showHome);
 const minutasCatFilter = document.getElementById('minutas-catFilter');
 const minutasDocList = document.getElementById('minutas-docList');
 const minutasViewer = document.getElementById('minutas-viewer');
