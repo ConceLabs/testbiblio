@@ -209,6 +209,38 @@ function performSearch(term) {
   clearHighlights();
   matches = [];
   currentIndex = -1;
+  
+  // Siempre mostrar la UI de resultados si hay un término de búsqueda
+  if (term) {
+    searchResults.style.display = 'flex';
+  } else {
+    searchResults.style.display = 'none';
+    return;
+  }
+  
+  if (!currentActiveContainer) {
+    resultCounter.textContent = 'No hay resultados';
+    return;
+  }
+  
+  try {
+    const walker = document.createTreeWalker(currentActiveContainer, NodeFilter.SHOW_TEXT, null, false);
+    let node, textNodes = [];
+    while (node = walker.nextNode()) {
+      // Filtrar nodos vacíos o solo con espacios
+      if (node.nodeValue.trim()) {
+        textNodes.push(node);
+      }
+    }
+
+    // Usamos un enfoque seguro para la expresión regular
+    let regex;
+    try {
+      regex = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\// === BÚSQUEDA ===
+function performSearch(term) {
+  clearHighlights();
+  matches = [];
+  currentIndex = -1;
   if (!term || !currentActiveContainer) return;
   
   const walker = document.createTreeWalker(currentActiveContainer, NodeFilter.SHOW_TEXT, null, false);
@@ -236,23 +268,93 @@ function performSearch(term) {
   currentIndex = matches.length > 0 ? 0 : -1;
   scrollToMatch();
   updateResultsUI();
+}'), 'gi');
+    } catch (e) {
+      regex = new RegExp(term, 'gi');
+    }
+
+    // Buscamos coincidencias
+    textNodes.forEach(textNode => {
+      let match;
+      let nodeValue = textNode.nodeValue;
+      regex.lastIndex = 0;
+      
+      while ((match = regex.exec(nodeValue)) !== null) {
+        matches.push({ 
+          node: textNode, 
+          startOffset: match.index, 
+          endOffset: match.index + match[0].length 
+        });
+      }
+    });
+
+    // Resaltamos las coincidencias (desde la última a la primera)
+    // para evitar problemas con los índices
+    let matchesReversed = [...matches].reverse();
+    matchesReversed.forEach(match => {
+      try {
+        const range = document.createRange();
+        range.setStart(match.node, match.startOffset);
+        range.setEnd(match.node, match.endOffset);
+        const mark = document.createElement('mark');
+        range.surroundContents(mark);
+      } catch (e) {
+        console.error("Error al resaltar coincidencia:", e);
+      }
+    });
+
+    currentIndex = matches.length > 0 ? 0 : -1;
+    scrollToMatch();
+  } catch (e) {
+    console.error("Error en búsqueda:", e);
+  }
+  
+  updateResultsUI();
 }
 
 function scrollToMatch() {
-  if (matches.length && currentIndex >= 0) {
+  if (!matches.length || currentIndex < 0 || !currentActiveContainer) return;
+  
+  try {
+    // Obtener todos los elementos resaltados
     const highlights = currentActiveContainer.querySelectorAll('mark');
+    
+    // Si no hay elementos resaltados, salir
+    if (!highlights.length) return;
+    
+    // Asegurarnos de que el índice esté en rango
+    if (currentIndex >= highlights.length) {
+      currentIndex = 0;
+    }
+    
+    // Quitar la clase de resaltado actual de todos los elementos
     highlights.forEach(h => h.classList.remove('current-match'));
+    
+    // Aplicar la clase de resaltado actual al elemento seleccionado
     const target = highlights[currentIndex];
     if (target) {
       target.classList.add('current-match');
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Desplazarse al elemento
+      target.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center',
+        inline: 'nearest'
+      });
     }
+  } catch (e) {
+    console.error("Error al desplazarse a la coincidencia:", e);
   }
 }
 
 function updateResultsUI() {
-  searchResults.style.display = matches.length || searchInput.value.trim() ? 'flex' : 'none';
-  resultCounter.textContent = matches.length ? `${currentIndex + 1} de ${matches.length}` : 'No hay resultados';
+  // Siempre mostrar los resultados si hay un término de búsqueda
+  if (searchInput.value.trim()) {
+    searchResults.style.display = 'flex';
+    resultCounter.textContent = matches.length ? `${currentIndex + 1} de ${matches.length}` : 'No hay resultados';
+  } else {
+    searchResults.style.display = 'none';
+  }
 }
 
 // === EVENT LISTENERS ===
@@ -282,8 +384,26 @@ document.addEventListener('DOMContentLoaded', () => {
   searchInput.addEventListener('input', e => {
     const term = e.target.value.trim();
     clearSearchBtn.classList.toggle('hidden', !term);
+    
+    // Mostrar inmediatamente la barra de resultados si hay texto
+    if (term) {
+      searchResults.style.display = 'flex';
+      resultCounter.textContent = 'Buscando...';
+    } else {
+      searchResults.style.display = 'none';
+    }
+    
+    // Limpiar cualquier búsqueda pendiente
     clearTimeout(searchInput._timeout);
-    searchInput._timeout = setTimeout(() => performSearch(term), 300);
+    
+    // Iniciar la búsqueda después de un pequeño retraso
+    searchInput._timeout = setTimeout(() => {
+      if (term) {
+        performSearch(term);
+      } else {
+        clearHighlights();
+      }
+    }, 300);
   });
   
   clearSearchBtn.addEventListener('click', () => {
