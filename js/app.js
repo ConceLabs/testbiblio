@@ -236,39 +236,7 @@ function performSearch(term) {
     // Usamos un enfoque seguro para la expresión regular
     let regex;
     try {
-      regex = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\// === BÚSQUEDA ===
-function performSearch(term) {
-  clearHighlights();
-  matches = [];
-  currentIndex = -1;
-  if (!term || !currentActiveContainer) return;
-  
-  const walker = document.createTreeWalker(currentActiveContainer, NodeFilter.SHOW_TEXT, null, false);
-  let node, textNodes = [];
-  while (node = walker.nextNode()) textNodes.push(node);
-
-  const regex = new RegExp(term, 'gi');
-  textNodes.forEach(textNode => {
-    let match;
-    regex.lastIndex = 0;
-    while ((match = regex.exec(textNode.nodeValue))) {
-      matches.push({ node: textNode, startOffset: match.index, endOffset: match.index + match[0].length });
-    }
-  });
-
-  // Marcamos las coincidencias de atrás hacia adelante para evitar problemas con los desplazamientos
-  matches.reverse().forEach(match => {
-    const range = document.createRange();
-    range.setStart(match.node, match.startOffset);
-    range.setEnd(match.node, match.endOffset);
-    const mark = document.createElement('mark');
-    range.surroundContents(mark);
-  });
-
-  currentIndex = matches.length > 0 ? 0 : -1;
-  scrollToMatch();
-  updateResultsUI();
-}'), 'gi');
+      regex = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
     } catch (e) {
       regex = new RegExp(term, 'gi');
     }
