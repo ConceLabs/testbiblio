@@ -1,4 +1,4 @@
-/* Variables principales */
+
 :root {
   --primary: #1f334d;
   --bg: #f5f7fa;
@@ -112,6 +112,19 @@ header.main-search .search-bar input {
   outline: none;
 }
 
+.clear-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-left: 0.5rem;
+}
+
+.clear-btn:hover {
+  color: #555;
+}
+
 /* Toolbar general */
 .toolbar {
   display: flex;
@@ -151,9 +164,10 @@ header.main-search .search-bar input {
   gap: .5rem;
 }
 
-/* Botones de zoom alineados horizontalmente */
-#doc-toolbar > div {
+/* Zoom buttons en horizontal */
+.zoom-controls {
   display: flex;
+  flex-direction: row;
   gap: 0.5rem;
   align-items: center;
   justify-content: center;
