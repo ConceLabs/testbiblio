@@ -1,4 +1,3 @@
-
 // === ELEMENTOS DEL DOM ===
 const homeView = document.getElementById('home-view');
 const viewToolbar = document.getElementById('view-toolbar');
@@ -12,6 +11,12 @@ const btnZoomIn = document.getElementById('btn-font-increase');
 const btnZoomOut = document.getElementById('btn-font-decrease');
 const viewer = document.getElementById('viewer');
 
+const minutasView = document.getElementById('minutas-view');
+const homeBtn = document.getElementById('home-btn');
+const minutasCatFilter = document.getElementById('minutas-catFilter');
+const minutasDocList = document.getElementById('minutas-docList');
+const minutasViewer = document.getElementById('minutas-viewer');
+
 const searchInput = document.getElementById('search');
 const searchResults = document.getElementById('search-results');
 const prevResult = document.getElementById('prev-result');
@@ -21,13 +26,30 @@ const closeSearch = document.getElementById('close-search');
 
 const toggleSearchBtn = document.getElementById('toggle-search');
 const searchBar = document.getElementById('search-bar');
-const clearSearchBtn = document.getElementById('clear-search');
 
-let currentZoom = 1;
-const zoomLevels = ['0.9rem', '1rem', '1.1rem', '1.2rem'];
-
-let currentMatches = [];
+let matches = [];
 let currentIndex = -1;
+let currentActiveContainer = null;
+
+const zoomLevels = ['small', 'medium', 'large', 'xlarge'];
+const zoomSteps = ['0.9rem', '1rem', '1.1rem', '1.2rem'];
+let currentZoom = 1;
+
+function applyZoom() {
+  if (currentActiveContainer) {
+    currentActiveContainer.style.fontSize = zoomSteps[currentZoom];
+  }
+}
+
+btnZoomIn.addEventListener('click', () => {
+  if (currentZoom < zoomLevels.length - 1) currentZoom++;
+  applyZoom();
+});
+
+btnZoomOut.addEventListener('click', () => {
+  if (currentZoom > 0) currentZoom--;
+  applyZoom();
+});
 
 const docs = [
   { file: 'docs/documento1.html', title: 'CÓDIGO PENAL', icon: 'fa-solid fa-gavel' },
@@ -80,32 +102,97 @@ const docsMinutas = [
   { path: 'minutas/32_INSTRUCCION_SOBRE_PRIMERAS_DILIGENCIAS.md', title: 'N° 32 INSTRUCCIÓN SOBRE PRIMERAS DILIGENCIAS', category: 'Diligencias e Investigación' }
 ];
 
-function applyZoom() {
-  viewer.style.fontSize = zoomLevels[currentZoom];
+function clearView() {
+  viewer.innerHTML = '';
+  minutasViewer.innerHTML = '';
+  clearHighlights();
+  matches = [];
+  currentIndex = -1;
+  searchResults.style.display = 'none';
 }
 
-btnZoomIn.addEventListener('click', () => {
-  if (currentZoom < zoomLevels.length - 1) currentZoom++;
+function showHome() {
+  minutasView.style.display = 'none';
+  viewer.style.display = 'none';
+  minutasViewer.style.display = 'none';
+  docToolbar.classList.add('hidden');
+  homeView.style.display = 'flex';
+  clearView();
+  loadDocs();
+  currentActiveContainer = null;
+}
+
+function showMinutas() {
+  homeView.style.display = 'none';
+  viewer.style.display = 'none';
+  docToolbar.classList.add('hidden');
+  minutasView.style.display = 'flex';
+  minutasViewer.style.display = 'none';
+  minutasDocList.style.display = 'grid';
+  clearView();
+  loadMinutas();
+  currentActiveContainer = null;
+}
+
+function loadMinutas() {
+  const selectedCategory = minutasCatFilter.value;
+  minutasDocList.innerHTML = '';
+  docsMinutas
+    .filter(doc => selectedCategory === 'all' || doc.category === selectedCategory)
+    .forEach(doc => {
+      const card = document.createElement('div');
+      card.className = 'doc-item';
+      card.innerHTML = `<div class="doc-title">${doc.title}</div><div class="doc-category">${doc.category}</div>`;
+      card.addEventListener('click', () => openDoc(doc.path, doc.title));
+      minutasDocList.appendChild(card);
+    });
+}
+
+function openDoc(path, title) {
+  clearView();
+  if (!searchBar.classList.contains('hidden')) {
+    searchBar.classList.add('hidden');
+  }
+
+  if (path.startsWith('minutas/')) {
+    homeView.style.display = 'none';
+    viewer.style.display = 'none';
+    docToolbar.classList.remove('hidden');
+    minutasView.style.display = 'flex';
+    minutasDocList.style.display = 'none';
+    minutasViewer.style.display = 'block';
+    currentActiveContainer = minutasViewer;
+  } else {
+    homeView.style.display = 'none';
+    minutasView.style.display = 'none';
+    docToolbar.classList.remove('hidden');
+    viewer.style.display = 'block';
+    currentActiveContainer = viewer;
+  }
+
+  fetch(path)
+    .then(res => res.text())
+    .then(content => {
+      currentActiveContainer.innerHTML = path.endsWith('.html') ? content : marked.parse(content);
+      document.title = `${title} – Biblioteca Jurídica`;
+      if (window.hljs) {
+        document.querySelectorAll('pre code').forEach(block => hljs.highlightBlock(block));
+      }
+    })
+    .catch(err => {
+      currentActiveContainer.innerHTML = `<div class="error-container"><p>Error al cargar el documento (${err.message}).</p><button class="retry-btn" onclick="openDoc('${path}', '${title}')">Reintentar</button></div>`;
+    });
+}
+
+toggleSearchBtn.addEventListener('click', () => {
+  searchBar.classList.toggle('hidden');
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadDocs();
+  changeView(true);
   applyZoom();
-});
-
-btnZoomOut.addEventListener('click', () => {
-  if (currentZoom > 0) currentZoom--;
-  applyZoom();
-});
-
-gridBtn.addEventListener('click', () => {
-  docList.classList.remove('doc-list');
-  docList.classList.add('doc-grid');
-  gridBtn.classList.add('active');
-  listBtn.classList.remove('active');
-});
-
-listBtn.addEventListener('click', () => {
-  docList.classList.remove('doc-grid');
-  docList.classList.add('doc-list');
-  listBtn.classList.add('active');
-  gridBtn.classList.remove('active');
+  minutasCatFilter.addEventListener('change', loadMinutas);
 });
 
 function loadDocs() {
@@ -114,136 +201,80 @@ function loadDocs() {
     const card = document.createElement('div');
     card.className = 'doc-item';
     card.innerHTML = `<div class="doc-icon"><i class="${doc.icon}"></i></div><div class="doc-title">${doc.title}</div>`;
-    card.addEventListener('click', (e) => {
-  e.preventDefault(); // 🚨 ESTO IMPIDE LA RECARGA
-  openDoc(doc.file, doc.title);
-});
+    card.addEventListener('click', () => doc.file === 'minutas' ? showMinutas() : openDoc(doc.file, doc.title));
     docList.appendChild(card);
   });
 }
 
-function openDoc(path, title) {
-  viewer.innerHTML = '';
-  document.title = title + " - Biblioteca Jurídica";
-
-  // Detectar si es minutas
-  if (path === 'minutas') {
-    document.getElementById('home-view').style.display = 'none';
-    document.getElementById('minutas-view').style.display = 'flex';
-    document.getElementById('viewer').style.display = 'none';
-    return;
-  }
-
-  document.getElementById('home-view').style.display = 'none';
-  document.getElementById('viewer').style.display = 'block';
-  document.getElementById('minutas-view').style.display = 'none';
-
-  fetch(path)
-    .then(res => res.text())
-    .then(content => {
-      if (path.endsWith('.md')) {
-        if (typeof marked !== 'undefined') {
-          viewer.innerHTML = marked.parse(content);
-        } else {
-          viewer.innerHTML = "<p>Error: No se pudo procesar el archivo Markdown.</p>";
-        }
-      } else {
-        viewer.innerHTML = content;
-      }
-
-      applyZoom();
-      if (searchInput.value.trim()) {
-        performSearch(searchInput.value.trim());
-      }
-    })
-    .catch(err => {
-      viewer.innerHTML = "<p>Error al cargar el documento.</p>";
-    });
+function clearHighlights() {
+  if (!currentActiveContainer) return;
+  currentActiveContainer.querySelectorAll('mark').forEach(mark => mark.replaceWith(document.createTextNode(mark.textContent)));
 }
 
 function performSearch(term) {
   clearHighlights();
-  if (!term) {
-    searchResults.style.display = 'none';
-    return;
-  }
-
-  const regex = new RegExp(`(${term})`, "gi");
-  viewer.innerHTML = viewer.innerHTML.replace(regex, '<span class="search-highlight">$1</span>');
-  currentMatches = Array.from(viewer.querySelectorAll('.search-highlight'));
-  currentIndex = currentMatches.length ? 0 : -1;
-
-  updateResultsUI();
-  scrollToMatch();
-}
-
-function clearHighlights() {
-  const highlights = viewer.querySelectorAll('.search-highlight');
-  highlights.forEach(h => {
-    h.outerHTML = h.innerHTML;
-  });
-  currentMatches = [];
+  matches = [];
   currentIndex = -1;
-}
-
-function updateResultsUI() {
-  if (searchInput.value.trim()) {
-    searchResults.style.display = 'flex';
-    resultCounter.textContent = currentMatches.length ? `${currentIndex + 1} de ${currentMatches.length}` : 'Sin coincidencias';
-  } else {
-    searchResults.style.display = 'none';
-  }
+  if (!term || !currentActiveContainer) return;
+  const textNodes = [...document.createTreeWalker(currentActiveContainer, NodeFilter.SHOW_TEXT)].map(w => w.currentNode);
+  const regex = new RegExp(term, 'gi');
+  textNodes.forEach(node => {
+    let match;
+    regex.lastIndex = 0;
+    while ((match = regex.exec(node.nodeValue))) {
+      matches.push({ node, startOffset: match.index, endOffset: match.index + match[0].length });
+    }
+  });
+  matches.reverse().forEach(match => {
+    const range = document.createRange();
+    range.setStart(match.node, match.startOffset);
+    range.setEnd(match.node, match.endOffset);
+    const mark = document.createElement('mark');
+    range.surroundContents(mark);
+  });
+  currentIndex = 0;
+  scrollToMatch();
+  updateResultsUI();
 }
 
 function scrollToMatch() {
-  currentMatches.forEach(el => el.classList.remove('current-hit'));
-  if (currentIndex >= 0 && currentMatches[currentIndex]) {
-    currentMatches[currentIndex].classList.add('current-hit');
-    currentMatches[currentIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (matches.length && currentIndex >= 0) {
+    const highlights = currentActiveContainer.querySelectorAll('mark');
+    highlights.forEach(h => h.classList.remove('current-match'));
+    const target = highlights[currentIndex];
+    target.classList.add('current-match');
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  loadDocs();
+function updateResultsUI() {
+  searchResults.style.display = matches.length ? 'flex' : (searchInput.value.trim() ? 'flex' : 'none');
+  resultCounter.textContent = matches.length ? `${currentIndex + 1} de ${matches.length}` : 'No hay resultados';
+}
 
-  btnBack.addEventListener('click', () => location.reload());
+prevResult.addEventListener('click', () => {
+  if (!matches.length) return;
+  currentIndex = (currentIndex - 1 + matches.length) % matches.length;
+  scrollToMatch();
+  updateResultsUI();
+});
 
-  toggleSearchBtn.addEventListener('click', () => {
-    searchBar.classList.toggle('hidden');
-    if (!searchBar.classList.contains('hidden')) searchInput.focus();
-  });
+nextResult.addEventListener('click', () => {
+  if (!matches.length) return;
+  currentIndex = (currentIndex + 1) % matches.length;
+  scrollToMatch();
+  updateResultsUI();
+});
 
-  searchInput.addEventListener('input', e => {
-    const term = e.target.value.trim();
-    clearSearchBtn.classList.toggle('hidden', !term);
-    performSearch(term);
-  });
+closeSearch.addEventListener('click', () => {
+  searchInput.value = '';
+  clearHighlights();
+  searchResults.style.display = 'none';
+});
 
-  clearSearchBtn.addEventListener('click', () => {
-    searchInput.value = '';
-    clearSearchBtn.classList.add('hidden');
-    clearHighlights();
-    updateResultsUI();
-  });
-
-  prevResult.addEventListener('click', () => {
-    if (!currentMatches.length) return;
-    currentIndex = (currentIndex - 1 + currentMatches.length) % currentMatches.length;
-    scrollToMatch();
-    updateResultsUI();
-  });
-
-  nextResult.addEventListener('click', () => {
-    if (!currentMatches.length) return;
-    currentIndex = (currentIndex + 1) % currentMatches.length;
-    scrollToMatch();
-    updateResultsUI();
-  });
-
-  closeSearch.addEventListener('click', () => {
-    searchInput.value = '';
-    clearSearchBtn.classList.add('hidden');
-    clearHighlights();
-    updateResultsUI();
-  });
+searchInput.addEventListener('input', e => {
+  clearTimeout(searchInput._timeout);
+  searchInput._timeout = setTimeout(() => {
+    if (currentActiveContainer) performSearch(e.target.value.trim());
+  }, 300);
 });
