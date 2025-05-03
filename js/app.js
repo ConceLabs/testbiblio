@@ -123,10 +123,31 @@ function openDoc(path, title) {
   viewer.innerHTML = '';
   document.title = title + " - Biblioteca Jurídica";
 
+  // Detectar si es minutas
+  if (path === 'minutas') {
+    document.getElementById('home-view').style.display = 'none';
+    document.getElementById('minutas-view').style.display = 'flex';
+    document.getElementById('viewer').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('home-view').style.display = 'none';
+  document.getElementById('viewer').style.display = 'block';
+  document.getElementById('minutas-view').style.display = 'none';
+
   fetch(path)
     .then(res => res.text())
     .then(content => {
-      viewer.innerHTML = content;
+      if (path.endsWith('.md')) {
+        if (typeof marked !== 'undefined') {
+          viewer.innerHTML = marked.parse(content);
+        } else {
+          viewer.innerHTML = "<p>Error: No se pudo procesar el archivo Markdown.</p>";
+        }
+      } else {
+        viewer.innerHTML = content;
+      }
+
       applyZoom();
       if (searchInput.value.trim()) {
         performSearch(searchInput.value.trim());
