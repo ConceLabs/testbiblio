@@ -53,7 +53,6 @@ btnZoomOut.addEventListener('click', () => {
   applyZoom();
 });
 
-// Cambiar vista grid/list
 gridBtn.addEventListener('click', () => {
   docList.classList.remove('doc-list');
   docList.classList.add('doc-grid');
@@ -150,6 +149,7 @@ function loadDocs() {
     docList.appendChild(card);
   });
 }
+
 function openDoc(path, title) {
   clearView();
   if (!searchBar.classList.contains('hidden')) searchBar.classList.add('hidden');
@@ -176,16 +176,26 @@ function openDoc(path, title) {
     .then(content => {
       currentActiveContainer.innerHTML = path.endsWith('.html') ? content : marked.parse(content);
       document.title = `${title} – Biblioteca Jurídica`;
+
+      // Evitar pre que bloquee búsqueda
+      currentActiveContainer.querySelectorAll('pre').forEach(pre => {
+        pre.outerHTML = `<div>${pre.innerHTML}</div>`;
+      });
+
       if (window.hljs) document.querySelectorAll('pre code').forEach(block => hljs.highlightBlock(block));
+
       applyZoom();
+
+      // Relanzar búsqueda si ya hay texto
+      if (searchInput.value.trim()) {
+        performSearch(searchInput.value.trim());
+      }
     })
     .catch(err => {
-      currentActiveContainer.innerHTML = `<div class="error-container">
-        <p>Error al cargar el documento (${err.message}).</p>
-        <button class="retry-btn" onclick="openDoc('${path}', '${title}')">Reintentar</button>
-      </div>`;
+      currentActiveContainer.innerHTML = `<div class="error-container"><p>Error al cargar el documento (${err.message}).</p></div>`;
     });
 }
+
 function clearHighlights() {
   if (!currentActiveContainer) return;
   currentActiveContainer.querySelectorAll('mark').forEach(mark => mark.replaceWith(document.createTextNode(mark.textContent)));
@@ -213,7 +223,7 @@ function performSearch(term) {
 
   while (node = walker.nextNode()) {
     if (node.nodeValue.trim()) {
-      const regex = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\$&'), 'gi');
+      const regex = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
       let match;
       while ((match = regex.exec(node.nodeValue)) !== null) {
         matches.push({ node, startOffset: match.index, endOffset: match.index + match[0].length });
