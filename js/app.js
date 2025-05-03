@@ -1,4 +1,3 @@
-
 // === ELEMENTOS DEL DOM ===
 const homeView = document.getElementById('home-view');
 const viewToolbar = document.getElementById('view-toolbar');
@@ -14,7 +13,6 @@ const viewer = document.getElementById('viewer');
 
 const minutasView = document.getElementById('minutas-view');
 const homeBtn = document.getElementById('home-btn');
-homeBtn.addEventListener('click', showHome);
 const minutasCatFilter = document.getElementById('minutas-catFilter');
 const minutasDocList = document.getElementById('minutas-docList');
 const minutasViewer = document.getElementById('minutas-viewer');
@@ -53,6 +51,10 @@ btnZoomOut.addEventListener('click', () => {
   if (currentZoom > 0) currentZoom--;
   applyZoom();
 });
+
+// Solución a): Asignar evento al botón de regreso
+btnBack.addEventListener('click', showHome);
+homeBtn.addEventListener('click', showHome);
 
 const docs = [
   { file: 'docs/documento1.html', title: 'CÓDIGO PENAL', icon: 'fa-solid fa-gavel' },
@@ -120,6 +122,7 @@ function showHome() {
   minutasViewer.style.display = 'none';
   docToolbar.classList.add('hidden');
   homeView.style.display = 'flex';
+  viewToolbar.classList.remove('hidden');
   clearView();
   loadDocs();
   currentActiveContainer = null;
@@ -175,13 +178,28 @@ function openDoc(path, title) {
     currentActiveContainer.innerHTML = path.endsWith('.html') ? content : marked.parse(content);
     document.title = `${title} – Biblioteca Jurídica`;
     if (window.hljs) document.querySelectorAll('pre code').forEach(block => hljs.highlightBlock(block));
+    
+    // Solución b): Activamos el buscador tras cargar el documento
+    if (searchInput.value.trim() !== '') {
+      performSearch(searchInput.value.trim());
+    }
   }).catch(err => {
     currentActiveContainer.innerHTML = `<div class="error-container"><p>Error al cargar el documento (${err.message}).</p><button class="retry-btn" onclick="openDoc('${path}', '${title}')">Reintentar</button></div>`;
   });
 }
 
-toggleSearchBtn.addEventListener('click', () => searchBar.classList.toggle('hidden'));
-document.addEventListener('DOMContentLoaded', () => { loadDocs(); applyZoom(); minutasCatFilter.addEventListener('change', loadMinutas); });
+toggleSearchBtn.addEventListener('click', () => {
+  searchBar.classList.toggle('hidden');
+  if (!searchBar.classList.contains('hidden')) {
+    searchInput.focus();
+  }
+});
+
+document.addEventListener('DOMContentLoaded', () => { 
+  loadDocs(); 
+  applyZoom(); 
+  minutasCatFilter.addEventListener('change', loadMinutas);
+});
 
 function loadDocs() {
   docList.innerHTML = '';
@@ -196,32 +214,72 @@ function loadDocs() {
 
 function clearHighlights() {
   if (!currentActiveContainer) return;
-  currentActiveContainer.querySelectorAll('mark').forEach(mark => mark.replaceWith(document.createTextNode(mark.textContent)));
+  const marks = currentActiveContainer.querySelectorAll('mark');
+  if (marks.length > 0) {
+    marks.forEach(mark => {
+      const text = document.createTextNode(mark.textContent);
+      mark.parentNode.replaceChild(text, mark);
+    });
+  }
 }
 
 function performSearch(term) {
   clearHighlights();
   matches = [];
   currentIndex = -1;
+  
   if (!term || !currentActiveContainer) return;
-  const textNodes = [...document.createTreeWalker(currentActiveContainer, NodeFilter.SHOW_TEXT)].map(w => w.currentNode);
+  
+  // Solución b): Mejorar el algoritmo de búsqueda
+  const content = currentActiveContainer.innerHTML;
   const regex = new RegExp(term, 'gi');
-  textNodes.forEach(node => {
-    let match;
-    regex.lastIndex = 0;
-    while ((match = regex.exec(node.nodeValue))) {
-      matches.push({ node, startOffset: match.index, endOffset: match.index + match[0].length });
+  
+  // Crear un div temporal para procesar el contenido
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = content;
+  
+  // Función para recorrer nodos de texto
+  function findTextNodes(node, results) {
+    if (node.nodeType === 3) { // Tipo 3 es nodo de texto
+      const content = node.textContent;
+      let match;
+      while ((match = regex.exec(content)) !== null) {
+        results.push({
+          node: node,
+          startOffset: match.index,
+          endOffset: match.index + match[0].length
+        });
+      }
+    } else if (node.nodeType === 1) { // Tipo 1 es elemento
+      for (let child of node.childNodes) {
+        findTextNodes(child, results);
+      }
     }
-  });
-  matches.reverse().forEach(match => {
-    const range = document.createRange();
-    range.setStart(match.node, match.startOffset);
-    range.setEnd(match.node, match.endOffset);
-    const mark = document.createElement('mark');
-    range.surroundContents(mark);
-  });
-  currentIndex = 0;
-  scrollToMatch();
+  }
+  
+  findTextNodes(currentActiveContainer, matches);
+  
+  // Destacamos los resultados
+  if (matches.length > 0) {
+    // Procesamos de atrás hacia adelante para no afectar los índices
+    for (let i = matches.length - 1; i >= 0; i--) {
+      const match = matches[i];
+      const range = document.createRange();
+      range.setStart(match.node, match.startOffset);
+      range.setEnd(match.node, match.endOffset);
+      
+      const mark = document.createElement('mark');
+      try {
+        range.surroundContents(mark);
+      } catch (e) {
+        console.log("Error al destacar texto:", e);
+      }
+    }
+    
+    currentIndex = 0;
+    scrollToMatch();
+  }
+  
   updateResultsUI();
 }
 
@@ -229,19 +287,64 @@ function scrollToMatch() {
   if (matches.length && currentIndex >= 0) {
     const highlights = currentActiveContainer.querySelectorAll('mark');
     highlights.forEach(h => h.classList.remove('current-match'));
-    const target = highlights[currentIndex];
-    target.classList.add('current-match');
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (highlights[currentIndex]) {
+      highlights[currentIndex].classList.add('current-match');
+      highlights[currentIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 }
 
 function updateResultsUI() {
-  searchResults.style.display = matches.length ? 'flex' : (searchInput.value.trim() ? 'flex' : 'none');
-  resultCounter.textContent = matches.length ? `${currentIndex + 1} de ${matches.length}` : 'No hay resultados';
+  if (matches.length > 0) {
+    searchResults.style.display = 'flex';
+    resultCounter.textContent = `${currentIndex + 1} de ${matches.length}`;
+  } else if (searchInput.value.trim()) {
+    searchResults.style.display = 'flex';
+    resultCounter.textContent = 'No hay resultados';
+  } else {
+    searchResults.style.display = 'none';
+  }
 }
 
-prevResult.addEventListener('click', () => { if (!matches.length) return; currentIndex = (currentIndex - 1 + matches.length) % matches.length; scrollToMatch(); updateResultsUI(); });
-nextResult.addEventListener('click', () => { if (!matches.length) return; currentIndex = (currentIndex + 1) % matches.length; scrollToMatch(); updateResultsUI(); });
-closeSearch.addEventListener('click', () => { searchInput.value = ''; clearSearchBtn.classList.add('hidden'); clearHighlights(); searchResults.style.display = 'none'; });
-searchInput.addEventListener('input', e => { clearTimeout(searchInput._timeout); searchInput._timeout = setTimeout(() => { if (searchInput.value.trim()) clearSearchBtn.classList.remove('hidden'); else clearSearchBtn.classList.add('hidden'); if (currentActiveContainer) performSearch(e.target.value.trim()); }, 300); });
-clearSearchBtn.addEventListener('click', () => { searchInput.value = ''; clearSearchBtn.classList.add('hidden'); clearHighlights(); searchResults.style.display = 'none'; });
+prevResult.addEventListener('click', () => { 
+  if (matches.length <= 0) return; 
+  currentIndex = (currentIndex - 1 + matches.length) % matches.length; 
+  scrollToMatch(); 
+  updateResultsUI(); 
+});
+
+nextResult.addEventListener('click', () => { 
+  if (matches.length <= 0) return; 
+  currentIndex = (currentIndex + 1) % matches.length; 
+  scrollToMatch(); 
+  updateResultsUI(); 
+});
+
+closeSearch.addEventListener('click', () => { 
+  searchInput.value = ''; 
+  clearSearchBtn.classList.add('hidden'); 
+  clearHighlights(); 
+  searchResults.style.display = 'none'; 
+});
+
+searchInput.addEventListener('input', e => { 
+  clearTimeout(searchInput._timeout); 
+  searchInput._timeout = setTimeout(() => { 
+    if (searchInput.value.trim()) {
+      clearSearchBtn.classList.remove('hidden');
+    } else {
+      clearSearchBtn.classList.add('hidden');
+    } 
+    
+    if (currentActiveContainer) {
+      performSearch(e.target.value.trim()); 
+    }
+  }, 300); 
+});
+
+clearSearchBtn.addEventListener('click', () => { 
+  searchInput.value = ''; 
+  clearSearchBtn.classList.add('hidden'); 
+  clearHighlights(); 
+  searchResults.style.display = 'none'; 
+});
