@@ -150,7 +150,42 @@ function loadDocs() {
     docList.appendChild(card);
   });
 }
+function openDoc(path, title) {
+  clearView();
+  if (!searchBar.classList.contains('hidden')) searchBar.classList.add('hidden');
 
+  if (path.startsWith('minutas/')) {
+    homeView.style.display = 'none';
+    viewer.style.display = 'none';
+    docToolbar.classList.remove('hidden');
+    minutasView.style.display = 'flex';
+    minutasDocList.style.display = 'none';
+    minutasViewer.style.display = 'block';
+    currentActiveContainer = minutasViewer;
+  } else {
+    homeView.style.display = 'none';
+    minutasView.style.display = 'none';
+    docToolbar.classList.remove('hidden');
+    viewer.style.display = 'block';
+    minutasViewer.style.display = 'none';
+    currentActiveContainer = viewer;
+  }
+
+  fetch(path)
+    .then(res => res.text())
+    .then(content => {
+      currentActiveContainer.innerHTML = path.endsWith('.html') ? content : marked.parse(content);
+      document.title = `${title} – Biblioteca Jurídica`;
+      if (window.hljs) document.querySelectorAll('pre code').forEach(block => hljs.highlightBlock(block));
+      applyZoom();
+    })
+    .catch(err => {
+      currentActiveContainer.innerHTML = `<div class="error-container">
+        <p>Error al cargar el documento (${err.message}).</p>
+        <button class="retry-btn" onclick="openDoc('${path}', '${title}')">Reintentar</button>
+      </div>`;
+    });
+}
 function clearHighlights() {
   if (!currentActiveContainer) return;
   currentActiveContainer.querySelectorAll('mark').forEach(mark => mark.replaceWith(document.createTextNode(mark.textContent)));
