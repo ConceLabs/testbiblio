@@ -223,123 +223,98 @@ function clearHighlights() {
   }
 }
 
+// === BUSQUEDA EN DOCUMENTO ===
 function performSearch(term) {
   clearHighlights();
   matches = [];
   currentIndex = -1;
-  
   if (!term || !currentActiveContainer) return;
-  
-  // Solución b): Mejorar el algoritmo de búsqueda
-  const content = currentActiveContainer.innerHTML;
+
+  // Usar TreeWalker correctamente para obtener todos los nodos de texto
+  const walker = document.createTreeWalker(
+    currentActiveContainer,
+    NodeFilter.SHOW_TEXT,
+    null,
+    false
+  );
+  const textNodes = [];
+  let node;
+  while (node = walker.nextNode()) {
+    textNodes.push(node);
+  }
+
   const regex = new RegExp(term, 'gi');
-  
-  // Crear un div temporal para procesar el contenido
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = content;
-  
-  // Función para recorrer nodos de texto
-  function findTextNodes(node, results) {
-    if (node.nodeType === 3) { // Tipo 3 es nodo de texto
-      const content = node.textContent;
-      let match;
-      while ((match = regex.exec(content)) !== null) {
-        results.push({
-          node: node,
-          startOffset: match.index,
-          endOffset: match.index + match[0].length
-        });
-      }
-    } else if (node.nodeType === 1) { // Tipo 1 es elemento
-      for (let child of node.childNodes) {
-        findTextNodes(child, results);
-      }
+  textNodes.forEach(textNode => {
+    let match;
+    regex.lastIndex = 0;
+    while ((match = regex.exec(textNode.nodeValue)) !== null) {
+      matches.push({
+        node: textNode,
+        startOffset: match.index,
+        endOffset: match.index + match[0].length
+      });
     }
-  }
-  
-  findTextNodes(currentActiveContainer, matches);
-  
-  // Destacamos los resultados
-  if (matches.length > 0) {
-    // Procesamos de atrás hacia adelante para no afectar los índices
-    for (let i = matches.length - 1; i >= 0; i--) {
-      const match = matches[i];
-      const range = document.createRange();
-      range.setStart(match.node, match.startOffset);
-      range.setEnd(match.node, match.endOffset);
-      
-      const mark = document.createElement('mark');
-      try {
-        range.surroundContents(mark);
-      } catch (e) {
-        console.log("Error al destacar texto:", e);
-      }
-    }
-    
-    currentIndex = 0;
-    scrollToMatch();
-  }
-  
+  });
+
+  // Resaltar coincidencias (procesar de atrás hacia adelante)
+  matches.reverse().forEach(match => {
+    const range = document.createRange();
+    range.setStart(match.node, match.startOffset);
+    range.setEnd(match.node, match.endOffset);
+    const mark = document.createElement('mark');
+    range.surroundContents(mark);
+  });
+
+  // Mostrar la primera
+  currentIndex = 0;
+  scrollToMatch();
   updateResultsUI();
 }
 
 function scrollToMatch() {
-  if (matches.length && currentIndex >= 0) {
-    const highlights = currentActiveContainer.querySelectorAll('mark');
-    highlights.forEach(h => h.classList.remove('current-match'));
-    if (highlights[currentIndex]) {
-      highlights[currentIndex].classList.add('current-match');
-      highlights[currentIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+  if (!matches.length || currentIndex < 0) return;
+  const highlights = currentActiveContainer.querySelectorAll('mark');
+  // Limpiar anteriores
+  highlights.forEach(h => h.classList.remove('current-match'));
+  // Marcar la actual
+  const target = highlights[currentIndex];
+  if (target) {
+    target.classList.add('current-match');
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 }
 
 function updateResultsUI() {
   if (matches.length > 0) {
-    searchResults.style.display = 'flex';
     resultCounter.textContent = `${currentIndex + 1} de ${matches.length}`;
-  } else if (searchInput.value.trim()) {
     searchResults.style.display = 'flex';
-    resultCounter.textContent = 'No hay resultados';
   } else {
-    searchResults.style.display = 'none';
+    resultCounter.textContent = 'No hay resultados';
+    // Mostrar barra de controles si hay término pero sin coincidencias
+    searchResults.style.display = searchInput.value.trim() ? 'flex' : 'none';
   }
 }
 
-prevResult.addEventListener('click', () => { 
-  if (matches.length <= 0) return; 
-  currentIndex = (currentIndex - 1 + matches.length) % matches.length; 
-  scrollToMatch(); 
-  updateResultsUI(); 
+// Eventos para navegar resultados
+prevResult.addEventListener('click', () => {
+  if (!matches.length) return;
+  currentIndex = (currentIndex - 1 + matches.length) % matches.length;
+  scrollToMatch();
+  updateResultsUI();
+});
+nextResult.addEventListener('click', () => {
+  if (!matches.length) return;
+  currentIndex = (currentIndex + 1) % matches.length;
+  scrollToMatch();
+  updateResultsUI();
 });
 
-nextResult.addEventListener('click', () => { 
-  if (matches.length <= 0) return; 
-  currentIndex = (currentIndex + 1) % matches.length; 
-  scrollToMatch(); 
-  updateResultsUI(); 
-});
-
-closeSearch.addEventListener('click', () => { 
-  searchInput.value = ''; 
-  clearSearchBtn.classList.add('hidden'); 
-  clearHighlights(); 
-  searchResults.style.display = 'none'; 
-});
-
-searchInput.addEventListener('input', e => { 
-  clearTimeout(searchInput._timeout); 
-  searchInput._timeout = setTimeout(() => { 
-    if (searchInput.value.trim()) {
-      clearSearchBtn.classList.remove('hidden');
-    } else {
-      clearSearchBtn.classList.add('hidden');
-    } 
-    
-    if (currentActiveContainer) {
-      performSearch(e.target.value.trim()); 
-    }
-  }, 300); 
+// Input listener para lanzar la búsqueda
+searchInput.addEventListener('input', e => {
+  clearTimeout(searchInput._timeout);
+  searchInput._timeout = setTimeout(() => {
+    performSearch(e.target.value.trim());
+  }, 300);
 });
 
 clearSearchBtn.addEventListener('click', () => { 
