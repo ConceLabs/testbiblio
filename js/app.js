@@ -181,7 +181,7 @@ function openDoc(path, title) {
 }
 
 toggleSearchBtn.addEventListener('click', () => searchBar.classList.toggle('hidden'));
-document.addEventListener('DOMContentLoaded', () => { loadDocs(); changeView(true); applyZoom(); minutasCatFilter.addEventListener('change', loadMinutas); });
+document.addEventListener('DOMContentLoaded', () => { loadDocs(); applyZoom(); minutasCatFilter.addEventListener('change', loadMinutas); });
 
 function loadDocs() {
   docList.innerHTML = '';
