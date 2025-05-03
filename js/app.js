@@ -1,4 +1,3 @@
-
 // === ELEMENTOS DEL DOM ===
 const homeView = document.getElementById('home-view');
 const viewToolbar = document.getElementById('view-toolbar');
@@ -95,7 +94,6 @@ const docsMinutas = [
   { path: 'minutas/24_Reclamos_por_infracción_de_garantías_de_terceros.md', title: 'N° 24 RECLAMOS POR INFRACCIÓN DE GARANTÍAS DE TERCEROS', category: 'Procedimiento y Garantías' },
   { path: 'minutas/25_Porte_o_tenencia_de_una_munición.md', title: 'N° 25 PORTE O TENENCIA DE UNA MUNICIÓN', category: 'Delitos y Tipicidad' },
   { path: 'minutas/26_Delito_continuado_-_reiterado.md', title: 'N° 26 DELITO CONTINUADO - REITERADO', category: 'Delitos y Tipicidad' },
-  // Eliminado el documento duplicado: N° 26-DELITO CONTINUADO - REITERADO
   { path: 'minutas/27_Control_viapublica.md', title: 'N° 27 CONTROL DE IDENTIDAD - TRANSACCIÓN EN LA VÍA PÚBLICA', category: 'Control de Identidad' },
   { path: 'minutas/28_Obligatoriedad_del_artículo_302_del_CPP_durante_la_etapa_investigativa.md', title: 'N° 28 OBLIGATORIEDAD DEL ARTÍCULO 302 DEL CPP DURANTE LA ETAPA INVESTIGATIVA', category: 'Procedimiento y Garantías' },
   { path: 'minutas/29_Abuso_sexual_-_Introducción_de_dedos.md', title: 'N° 29 ABUSO SEXUAL - INTRODUCCIÓN DE DEDOS', category: 'Delitos y Tipicidad' },
@@ -104,6 +102,7 @@ const docsMinutas = [
   { path: 'minutas/32_INSTRUCCION_SOBRE_PRIMERAS_DILIGENCIAS.md', title: 'N° 32 INSTRUCCIÓN SOBRE PRIMERAS DILIGENCIAS', category: 'Diligencias e Investigación' }
 ];
 
+// === FUNCIONES DE INTERFAZ ===
 function clearView() {
   viewer.innerHTML = '';
   minutasViewer.innerHTML = '';
@@ -114,26 +113,39 @@ function clearView() {
 }
 
 function showHome() {
+  homeView.style.display = 'flex';
   minutasView.style.display = 'none';
   viewer.style.display = 'none';
   minutasViewer.style.display = 'none';
   docToolbar.classList.add('hidden');
-  homeView.style.display = 'flex';
   clearView();
   loadDocs();
   currentActiveContainer = null;
+  document.title = 'Biblioteca Jurídica';
 }
 
 function showMinutas() {
   homeView.style.display = 'none';
   viewer.style.display = 'none';
+  minutasViewer.style.display = 'none';
   docToolbar.classList.add('hidden');
   minutasView.style.display = 'flex';
-  minutasViewer.style.display = 'none';
   minutasDocList.style.display = 'grid';
   clearView();
   loadMinutas();
   currentActiveContainer = null;
+  document.title = 'Minutas Jurisprudencia – Biblioteca Jurídica';
+}
+
+function loadDocs() {
+  docList.innerHTML = '';
+  docs.forEach(doc => {
+    const card = document.createElement('div');
+    card.className = 'doc-item';
+    card.innerHTML = `<div class="doc-icon"><i class="${doc.icon}"></i></div><div class="doc-title">${doc.title}</div>`;
+    card.addEventListener('click', () => doc.file === 'minutas' ? showMinutas() : openDoc(doc.file, doc.title));
+    docList.appendChild(card);
+  });
 }
 
 function loadMinutas() {
@@ -167,30 +179,24 @@ function openDoc(path, title) {
     minutasView.style.display = 'none';
     docToolbar.classList.remove('hidden');
     viewer.style.display = 'block';
+    minutasViewer.style.display = 'none';
     currentActiveContainer = viewer;
   }
 
-  fetch(path).then(res => res.text()).then(content => {
-    currentActiveContainer.innerHTML = path.endsWith('.html') ? content : marked.parse(content);
-    document.title = `${title} – Biblioteca Jurídica`;
-    if (window.hljs) document.querySelectorAll('pre code').forEach(block => hljs.highlightBlock(block));
-  }).catch(err => {
-    currentActiveContainer.innerHTML = `<div class="error-container"><p>Error al cargar el documento (${err.message}).</p><button class="retry-btn" onclick="openDoc('${path}', '${title}')">Reintentar</button></div>`;
-  });
-}
-
-toggleSearchBtn.addEventListener('click', () => searchBar.classList.toggle('hidden'));
-document.addEventListener('DOMContentLoaded', () => { loadDocs(); changeView(true); applyZoom(); minutasCatFilter.addEventListener('change', loadMinutas); });
-
-function loadDocs() {
-  docList.innerHTML = '';
-  docs.forEach(doc => {
-    const card = document.createElement('div');
-    card.className = 'doc-item';
-    card.innerHTML = `<div class="doc-icon"><i class="${doc.icon}"></i></div><div class="doc-title">${doc.title}</div>`;
-    card.addEventListener('click', () => doc.file === 'minutas' ? showMinutas() : openDoc(doc.file, doc.title));
-    docList.appendChild(card);
-  });
+  fetch(path)
+    .then(res => res.text())
+    .then(content => {
+      currentActiveContainer.innerHTML = path.endsWith('.html') ? content : marked.parse(content);
+      document.title = `${title} – Biblioteca Jurídica`;
+      if (window.hljs) document.querySelectorAll('pre code').forEach(block => hljs.highlightBlock(block));
+      applyZoom();
+    })
+    .catch(err => {
+      currentActiveContainer.innerHTML = `<div class="error-container">
+        <p>Error al cargar el documento (${err.message}).</p>
+        <button class="retry-btn" onclick="openDoc('${path}', '${title}')">Reintentar</button>
+      </div>`;
+    });
 }
 
 function clearHighlights() {
@@ -198,159 +204,13 @@ function clearHighlights() {
   currentActiveContainer.querySelectorAll('mark').forEach(mark => mark.replaceWith(document.createTextNode(mark.textContent)));
 }
 
+// === BÚSQUEDA ===
 function performSearch(term) {
   clearHighlights();
   matches = [];
   currentIndex = -1;
   if (!term || !currentActiveContainer) return;
-  const textNodes = [...document.createTreeWalker(currentActiveContainer, NodeFilter.SHOW_TEXT)].map(w => w.currentNode);
-  const regex = new RegExp(term, 'gi');
-  textNodes.forEach(node => {
-    let match;
-    regex.lastIndex = 0;
-    while ((match = regex.exec(node.nodeValue))) {
-      matches.push({ node, startOffset: match.index, endOffset: match.index + match[0].length });
-    }
-  });
-  matches.reverse().forEach(match => {
-    const range = document.createRange();
-    range.setStart(match.node, match.startOffset);
-    range.setEnd(match.node, match.endOffset);
-    const mark = document.createElement('mark');
-    range.surroundContents(mark);
-  });
-  currentIndex = 0;
-  scrollToMatch();
-  updateResultsUI();
-}
-
-function scrollToMatch() {
-  if (matches.length && currentIndex >= 0) {
-    const highlights = currentActiveContainer.querySelectorAll('mark');
-    highlights.forEach(h => h.classList.remove('current-match'));
-    const target = highlights[currentIndex];
-    target.classList.add('current-match');
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-}
-
-function updateResultsUI() {
-  searchResults.style.display = matches.length ? 'flex' : (searchInput.value.trim() ? 'flex' : 'none');
-  resultCounter.textContent = matches.length ? `${currentIndex + 1} de ${matches.length}` : 'No hay resultados';
-}
-
-prevResult.addEventListener('click', () => { if (!matches.length) return; currentIndex = (currentIndex - 1 + matches.length) % matches.length; scrollToMatch(); updateResultsUI(); });
-nextResult.addEventListener('click', () => { if (!matches.length) return; currentIndex = (currentIndex + 1) % matches.length; scrollToMatch(); updateResultsUI(); });
-closeSearch.addEventListener('click', () => { searchInput.value = ''; clearSearchBtn.classList.add('hidden'); clearHighlights(); searchResults.style.display = 'none'; });
-searchInput.addEventListener('input', e => { clearTimeout(searchInput._timeout); searchInput._timeout = setTimeout(() => { if (searchInput.value.trim()) clearSearchBtn.classList.remove('hidden'); else clearSearchBtn.classList.add('hidden'); if (currentActiveContainer) performSearch(e.target.value.trim()); }, 300); });
-clearSearchBtn.addEventListener('click', () => { searchInput.value = ''; clearSearchBtn.classList.add('hidden'); clearHighlights(); searchResults.style.display = 'none'; });
-
-
-// === FUNCIONES DE INTERFAZ ===
-
-function loadDocs() {
-  docList.innerHTML = '';
-  docs.forEach(doc => {
-    const card = document.createElement('div');
-    card.className = 'doc-item';
-    card.innerHTML = `<div class="doc-icon"><i class="${doc.icon}"></i></div><div class="doc-title">${doc.title}</div>`;
-    card.addEventListener('click', () => doc.file === 'minutas' ? showMinutas() : openDoc(doc.file, doc.title));
-    docList.appendChild(card);
-  });
-}
-
-function loadMinutas() {
-  minutasDocList.innerHTML = '';
-  const cat = minutasCatFilter.value;
-  docsMinutas
-    .filter(d => cat === 'all' || d.category === cat)
-    .forEach(doc => {
-      const card = document.createElement('div');
-      card.className = 'doc-item';
-      card.innerHTML = `<div class="doc-title">${doc.title}</div><div class="doc-category">${doc.category}</div>`;
-      card.addEventListener('click', () => openDoc(doc.path, doc.title));
-      minutasDocList.appendChild(card);
-    });
-}
-
-function showHome() {
-  homeView.style.display = 'flex';
-  docToolbar.classList.add('hidden');
-  minutasView.style.display = 'none';
-  viewer.style.display = 'none';
-  clearView();
-  loadDocs();
-  currentActiveContainer = null;
-}
-
-function showMinutas() {
-  homeView.style.display = 'none';
-  docToolbar.classList.add('hidden');
-  minutasView.style.display = 'flex';
-  viewer.style.display = 'none';
-  clearView();
-  loadMinutas();
-  currentActiveContainer = null;
-}
-
-function openDoc(path, title) {
-  clearView();
-  searchBar.classList.add('hidden');
-  const isMin = path.startsWith('minutas/');
-
-  homeView.style.display = 'none';
-  docToolbar.classList.remove('hidden');
-  minutasView.style.display = isMin ? 'flex' : 'none';
-  viewer.style.display = isMin ? 'none' : 'block';
-
-  currentActiveContainer = isMin ? minutasViewer : viewer;
-
-  fetch(path).then(res => res.text()).then(content => {
-    currentActiveContainer.innerHTML = path.endsWith('.html') ? content : marked.parse(content);
-    if (window.hljs) document.querySelectorAll('pre code').forEach(block => hljs.highlightBlock(block));
-  });
-}
-
-function clearView() {
-  viewer.innerHTML = '';
-  minutasViewer.innerHTML = '';
-  clearHighlights();
-  matches = [];
-  currentIndex = -1;
-  searchResults.style.display = 'none';
-}
-
-function clearHighlights() {
-  if (!currentActiveContainer) return;
-  currentActiveContainer.querySelectorAll('mark').forEach(m => m.replaceWith(document.createTextNode(m.textContent)));
-}
-
-// === BUSQUEDA ===
-toggleSearchBtn.addEventListener('click', () => {
-  searchBar.classList.toggle('hidden');
-  if (!searchBar.classList.contains('hidden')) searchInput.focus();
-});
-
-searchInput.addEventListener('input', e => {
-  const term = e.target.value.trim();
-  clearSearchBtn.classList.toggle('hidden', !term);
-  clearTimeout(searchInput._timeout);
-  searchInput._timeout = setTimeout(() => performSearch(term), 300);
-});
-
-clearSearchBtn.addEventListener('click', () => {
-  searchInput.value = '';
-  clearSearchBtn.classList.add('hidden');
-  clearHighlights();
-  searchResults.style.display = 'none';
-});
-
-function performSearch(term) {
-  clearHighlights();
-  matches = [];
-  currentIndex = -1;
-  if (!term || !currentActiveContainer) return;
-
+  
   const walker = document.createTreeWalker(currentActiveContainer, NodeFilter.SHOW_TEXT, null, false);
   let node, textNodes = [];
   while (node = walker.nextNode()) textNodes.push(node);
@@ -364,6 +224,7 @@ function performSearch(term) {
     }
   });
 
+  // Marcamos las coincidencias de atrás hacia adelante para evitar problemas con los desplazamientos
   matches.reverse().forEach(match => {
     const range = document.createRange();
     range.setStart(match.node, match.startOffset);
@@ -372,49 +233,87 @@ function performSearch(term) {
     range.surroundContents(mark);
   });
 
-  currentIndex = 0;
+  currentIndex = matches.length > 0 ? 0 : -1;
   scrollToMatch();
   updateResultsUI();
 }
 
 function scrollToMatch() {
-  if (!matches.length || currentIndex < 0) return;
-  const highlights = currentActiveContainer.querySelectorAll('mark');
-  highlights.forEach(h => h.classList.remove('current-match'));
-  const target = highlights[currentIndex];
-  if (target) {
-    target.classList.add('current-match');
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (matches.length && currentIndex >= 0) {
+    const highlights = currentActiveContainer.querySelectorAll('mark');
+    highlights.forEach(h => h.classList.remove('current-match'));
+    const target = highlights[currentIndex];
+    if (target) {
+      target.classList.add('current-match');
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 }
 
 function updateResultsUI() {
-  if (matches.length) {
-    resultCounter.textContent = `${currentIndex + 1} de ${matches.length}`;
-    searchResults.style.display = 'flex';
-  } else {
-    resultCounter.textContent = 'No hay resultados';
-    searchResults.style.display = searchInput.value.trim() ? 'flex' : 'none';
-  }
+  searchResults.style.display = matches.length || searchInput.value.trim() ? 'flex' : 'none';
+  resultCounter.textContent = matches.length ? `${currentIndex + 1} de ${matches.length}` : 'No hay resultados';
 }
 
-prevResult.addEventListener('click', () => {
-  if (!matches.length) return;
-  currentIndex = (currentIndex - 1 + matches.length) % matches.length;
-  scrollToMatch();
-  updateResultsUI();
-});
-
-nextResult.addEventListener('click', () => {
-  if (!matches.length) return;
-  currentIndex = (currentIndex + 1) % matches.length;
-  scrollToMatch();
-  updateResultsUI();
-});
-
-closeSearch.addEventListener('click', () => {
-  searchInput.value = '';
-  clearSearchBtn.classList.add('hidden');
-  clearHighlights();
-  searchResults.style.display = 'none';
+// === EVENT LISTENERS ===
+document.addEventListener('DOMContentLoaded', () => {
+  loadDocs();
+  minutasCatFilter.addEventListener('change', loadMinutas);
+  
+  // Botones de navegación
+  btnBack.addEventListener('click', () => {
+    if (minutasView.style.display !== 'none' && minutasViewer.style.display !== 'none') {
+      minutasViewer.style.display = 'none';
+      minutasDocList.style.display = 'grid';
+      docToolbar.classList.add('hidden');
+    } else {
+      showHome();
+    }
+  });
+  
+  homeBtn.addEventListener('click', showHome);
+  
+  // Búsqueda
+  toggleSearchBtn.addEventListener('click', () => {
+    searchBar.classList.toggle('hidden');
+    if (!searchBar.classList.contains('hidden')) searchInput.focus();
+  });
+  
+  searchInput.addEventListener('input', e => {
+    const term = e.target.value.trim();
+    clearSearchBtn.classList.toggle('hidden', !term);
+    clearTimeout(searchInput._timeout);
+    searchInput._timeout = setTimeout(() => performSearch(term), 300);
+  });
+  
+  clearSearchBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    clearSearchBtn.classList.add('hidden');
+    clearHighlights();
+    searchResults.style.display = 'none';
+  });
+  
+  prevResult.addEventListener('click', () => {
+    if (!matches.length) return;
+    currentIndex = (currentIndex - 1 + matches.length) % matches.length;
+    scrollToMatch();
+    updateResultsUI();
+  });
+  
+  nextResult.addEventListener('click', () => {
+    if (!matches.length) return;
+    currentIndex = (currentIndex + 1) % matches.length;
+    scrollToMatch();
+    updateResultsUI();
+  });
+  
+  closeSearch.addEventListener('click', () => {
+    searchInput.value = '';
+    clearSearchBtn.classList.add('hidden');
+    clearHighlights();
+    searchResults.style.display = 'none';
+  });
+  
+  // Iniciar con la vista home
+  showHome();
 });
