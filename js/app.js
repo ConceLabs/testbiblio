@@ -153,8 +153,8 @@ function showHome() {
   clearView();
   loadDocs();
   currentActiveContainer = null;
-  searchResults.style.display = 'none';
   searchBar.classList.add('hidden');
+  searchResults.style.display = 'none';
 }
 
 function clearView() {
@@ -169,6 +169,7 @@ function openDoc(path, title) {
   minutasView.style.display = 'none';
   docToolbar.classList.remove('hidden');
   searchBar.classList.remove('hidden');
+  searchResults.style.display = 'none';
 
   if (path.startsWith('minutas/')) {
     minutasView.style.display = 'flex';
