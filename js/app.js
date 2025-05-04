@@ -86,7 +86,7 @@ const docsMinutas = [
   { path: 'minutas/32_OTRA_MINUTA.md', title: 'N° 32 OTRA MINUTA Ejemplo', category: 'Categoría Ejemplo' }
 ];
 
-// ==================== EVENT LISTENERS ====================
+// Event Listeners
 gridBtn.addEventListener('click', () => changeView(true));
 listBtn.addEventListener('click', () => changeView(false));
 btnBack.addEventListener('click', showHome);
@@ -128,15 +128,11 @@ document.addEventListener('DOMContentLoaded', () => {
   minutasCatFilter.addEventListener('change', loadMinutas);
 });
 
-// ==================== FUNCIONES ====================
-
-// Cambia entre vista grid y lista en el home
 function changeView(isGrid) {
   docList.classList.toggle('grid-view', isGrid);
   docList.classList.toggle('list-view', !isGrid);
 }
 
-// Carga y muestra tarjetas de documentos
 function loadDocs() {
   docList.innerHTML = '';
   docs.forEach(doc => {
@@ -148,7 +144,6 @@ function loadDocs() {
   });
 }
 
-// Muestra la vista principal (home)
 function showHome() {
   minutasView.style.display = 'none';
   viewer.style.display = 'none';
@@ -159,14 +154,12 @@ function showHome() {
   currentActiveContainer = null;
 }
 
-// Limpia contenido de visor y resaltados
 function clearView() {
   viewer.innerHTML = '';
   minutasViewer.innerHTML = '';
   if (markInstance) clearHighlights();
 }
 
-// Abre y renderiza documentos HTML o Markdown (minutas)
 function openDoc(path, title) {
   clearView();
   if (!searchBar.classList.contains('hidden')) searchBar.classList.add('hidden');
@@ -192,20 +185,12 @@ function openDoc(path, title) {
     .then(content => {
       currentActiveContainer.innerHTML = path.endsWith('.html') ? content : marked.parse(content);
       document.title = `${title} – Biblioteca Jurídica`;
-      if (window.hljs) {
-        document.querySelectorAll('pre code').forEach(block => hljs.highlightBlock(block));
-      }
     })
     .catch(err => {
-      currentActiveContainer.innerHTML = `
-        <div class="error-container">
-          <p>Error al cargar: ${err.message}</p>
-          <button class="retry-btn" onclick="openDoc('${path}', '${title}')">Reintentar</button>
-        </div>`;
+      currentActiveContainer.innerHTML = `<div class="error-container"><p>Error al cargar: ${err.message}</p></div>`;
     });
 }
 
-// Ajusta tamaño de fuente en el visor activo
 function applyZoom() {
   if (currentActiveContainer) {
     currentActiveContainer.style.fontSize = zoomSteps[currentZoom];
@@ -217,7 +202,6 @@ function changeZoom(delta) {
   applyZoom();
 }
 
-// Resalta términos usando Mark.js
 function clearHighlights() {
   if (markInstance) markInstance.unmark();
 }
@@ -248,10 +232,9 @@ function scrollToMatch() {
 
 function updateResultsUI() {
   searchResults.style.display = matches.length ? 'flex' : 'none';
-  resultCounter.textContent = matches.length ? \`\${currentIndex + 1} de \${matches.length}\` : 'No hay resultados';
+  resultCounter.textContent = matches.length ? `${currentIndex + 1} de ${matches.length}` : 'No hay resultados';
 }
 
-// Carga y muestra tarjetas de minutas
 function showMinutas() {
   homeView.style.display = 'none';
   viewer.style.display = 'none';
@@ -260,8 +243,8 @@ function showMinutas() {
   minutasDocList.style.display = 'grid';
   minutasViewer.style.display = 'none';
   clearView();
-  loadMinutas();
   currentActiveContainer = null;
+  loadMinutas(); // <<< CORRECCIÓN INCLUIDA
 }
 
 function loadMinutas() {
