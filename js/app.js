@@ -1,3 +1,4 @@
+
 // === ELEMENTOS DEL DOM ===
 const homeView = document.getElementById('home-view');
 const viewToolbar = document.getElementById('view-toolbar');
@@ -29,12 +30,12 @@ const closeSearch = document.getElementById('close-search');
 let matches = [];
 let currentIndex = -1;
 let currentActiveContainer = null;
-let markInstance = null;  // instance of Mark.js
+let markInstance = null;
 
 const zoomSteps = ['0.9rem', '1rem', '1.1rem', '1.2rem'];
 let currentZoom = 1;
 
-// Definición de documentos
+// Documentos
 const docs = [
   { file: 'docs/documento1.html', title: 'CÓDIGO PENAL', icon: 'fa-solid fa-gavel' },
   { file: 'docs/documento2.html', title: 'CÓDIGO PROCESAL PENAL', icon: 'fa-solid fa-scale-balanced' },
@@ -152,6 +153,8 @@ function showHome() {
   clearView();
   loadDocs();
   currentActiveContainer = null;
+  searchResults.style.display = 'none';
+  searchBar.classList.add('hidden');
 }
 
 function clearView() {
@@ -162,20 +165,17 @@ function clearView() {
 
 function openDoc(path, title) {
   clearView();
-  if (!searchBar.classList.contains('hidden')) searchBar.classList.add('hidden');
+  homeView.style.display = 'none';
+  minutasView.style.display = 'none';
+  docToolbar.classList.remove('hidden');
+  searchBar.classList.remove('hidden');
 
   if (path.startsWith('minutas/')) {
-    homeView.style.display = 'none';
-    viewer.style.display = 'none';
-    docToolbar.classList.remove('hidden');
     minutasView.style.display = 'flex';
     minutasDocList.style.display = 'none';
     minutasViewer.style.display = 'block';
     currentActiveContainer = minutasViewer;
   } else {
-    homeView.style.display = 'none';
-    minutasView.style.display = 'none';
-    docToolbar.classList.remove('hidden');
     viewer.style.display = 'block';
     currentActiveContainer = viewer;
   }
@@ -220,6 +220,7 @@ function performSearch(term) {
         currentIndex = 0;
         scrollToMatch();
       }
+      searchResults.style.display = matches.length ? 'flex' : 'none';
       updateResultsUI();
     }
   });
@@ -231,7 +232,6 @@ function scrollToMatch() {
 }
 
 function updateResultsUI() {
-  searchResults.style.display = matches.length ? 'flex' : 'none';
   resultCounter.textContent = matches.length ? `${currentIndex + 1} de ${matches.length}` : 'No hay resultados';
 }
 
@@ -244,7 +244,9 @@ function showMinutas() {
   minutasViewer.style.display = 'none';
   clearView();
   currentActiveContainer = null;
-  loadMinutas(); // <<< CORRECCIÓN INCLUIDA
+  loadMinutas();
+  searchResults.style.display = 'none';
+  searchBar.classList.add('hidden');
 }
 
 function loadMinutas() {
